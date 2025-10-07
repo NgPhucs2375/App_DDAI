@@ -1,10 +1,10 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-export default function ExploreScreen() {
+export default function ProfileScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Khám phá thế giới 🌏</Text>
+      <Text style={styles.text}>Trang cá nhân 👤</Text>
     </View>
   );
 }

@@ -1,35 +1,55 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
+export default function Layout_Tabs() {
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
+    <Tabs 
+screenOptions={{
+      headerStyle:{backgroundColor:'#1abc9c'},
+      headerTintColor:'white',
+      tabBarActiveTintColor:'#e67e22',
+      tabBarInactiveTintColor:'gray',
+      tabBarStyle:{backgroundColor:'#ecf0f1'},
+}}
+    >
       <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-        }}
+      name="index"
+      options={{
+        title:'Trang chủ',  
+        tabBarIcon: ({color, size}) => (
+          <Ionicons name ="home" size={size} color={color}/>
+        ),
+      }}
       />
+
       <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-        }}
-      />
+       name="details" 
+       options={{
+        title:"Thông tin chi tiết",
+        tabBarIcon: ({color, size}) => (
+          <Ionicons name ="document-text" size={size} color={color}/>
+        ),
+      }}/>
+
+       <Tabs.Screen
+       name="explore" 
+       options={{
+        title:"Khám phá",
+        tabBarIcon: ({color, size}) => (
+          <Ionicons name ="compass" size={size} color={color}/>
+        ),
+      }}/>
+
+       <Tabs.Screen
+       name="profile" 
+       options={{
+        title:"Thông tin chi tiết",
+        tabBarIcon: ({color, size}) => (
+          <Ionicons name ="person" size={size} color={color}/>
+        ),
+      }}/>
+
     </Tabs>
   );
 }
