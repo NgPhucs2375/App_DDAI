@@ -1,88 +1,107 @@
+import { Ionicons } from '@expo/vector-icons';
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { Button, StyleSheet, Text, TextInput, View } from 'react-native';
-export default function HomeScreen() {
-  
-  // Khai báo state để lưu tên và lời chào
-  const [name, setName] = useState('');
-  const router = useRouter();
+import React from 'react';
+import { Button, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import TourListScreen from './components/TourListSrceen';
 
-  // hàm check input và hiển thị lời chào
-  // const handlePress = () => {
-  //   if (name.trim() === '') {
-  //     setGreeting('Vui lòng nhập tên của bạn');
-  //   } else {
-  //     setGreeting(`Xin chào ${name}, chào mừng bạn đến với React Native!`);
-  //   }
-  // };
+const Tab = createBottomTabNavigator();
 
-  const handleNavigate =() =>{
-    if(name.trim() ===''){
-      alert('Vui lòng nhập tên của bạn');
-      return
-    }
-
-    // truyền dữ liệu sang màn hình Details
-    router.push({
-      pathname:'/details',
-      params:{userName:name},
-    });
-  };
-
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Demo React Native</Text>
-
-      <TextInput
-        style={styles.input}
-        placeholder="Nhập tên của bạn"
-        value={name}
-        onChangeText={setName}
-      />
-
-      {/* <Button title="Xác nhận" onPress={handlePress} />
-
-      {greeting ? <Text style={styles.greeting}>{greeting}</Text> : null}
-
-
-      <Button 
-      title="Sang trang chi tiết"
-      onPress={()=> router.push('/(tabs)/details')}/> */}
-
-      <Button 
-      title="Chi tiết"
-      onPress={handleNavigate}/>
-      
-    </View>
-  );
-}
-
+// ============ STYLE ============
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#51586679',
-    justifyContent: 'center',
+    backgroundColor: '#fff',
+  },
+  header: {
+    backgroundColor: '#0288D1',
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
+    justifyContent: 'space-between',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#5bc0de',
+  },
+  searchContainer: {
+    flex: 1,
+    marginHorizontal: 10,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    height: 38,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  searchInput: {
+    fontSize: 16,
+    color: '#333',
+  },
+  content: {
+    flex: 1,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 20,
-  },
-  input: {
-    width: '80%',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 10,
-    backgroundColor: '#fff',
+    fontSize: 22,
+    fontWeight: '600',
     marginBottom: 15,
   },
-  greeting: {
-    fontSize: 20,
-    color: 'yellow',
-    marginTop: 15,
-  },
 });
+
+export default function HomeScreen() {
+  const router = useRouter();
+
+  return (
+    <View style={styles.container}>
+      {/* HEADER */}
+      <View style={styles.header}>
+        {/* Avatar */}
+        <TouchableOpacity>
+          <Image
+            source={{ uri: 'https://i.pravatar.cc/100' }}
+            style={styles.avatar}
+          />
+        </TouchableOpacity>
+
+        {/* Ô tìm kiếm */}
+        <View style={styles.searchContainer}>
+          <TextInput
+            placeholder="Tìm kiếm..."
+            placeholderTextColor="#555"
+            style={styles.searchInput}
+          />
+        </View>
+
+        {/* Nút bên phải */}
+        <TouchableOpacity>
+          <Ionicons name="notifications-outline" size={26} color="white" />
+        </TouchableOpacity>
+      </View>
+
+      {/* BODY */}
+      <View style={styles.content}>
+        <Text style={styles.title}>Trang chủ</Text>
+        <Button title="Xem chi tiết" onPress={() => router.push('/details')} />
+
+        <View style={{ flex: 1, width: '100%' }}>
+          <Tab.Navigator>
+            <Tab.Screen name="Tours" component={TourListScreen} />
+          </Tab.Navigator>
+        </View>
+      </View>
+    </View>
+  );
+}

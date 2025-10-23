@@ -6,6 +6,7 @@ export default function Layout_Tabs() {
   return (
     <Tabs 
 screenOptions={{
+      headerShown: false, // ẩn header mặc định của TAB
       headerStyle:{backgroundColor:'#1abc9c'},
       headerTintColor:'white',
       tabBarActiveTintColor:'#e67e22',
