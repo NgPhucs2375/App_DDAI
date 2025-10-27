@@ -50,6 +50,16 @@ screenOptions={{
           <Ionicons name ="person" size={size} color={color}/>
         ),
       }}/>
+        <Tabs.Screen
+          name="food_recognition"
+          options={{
+            title: "Nhận diện món ăn",
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="fast-food" size={size} color={color} />
+            ),
+          }}
+        />
+
 
     </Tabs>
   );

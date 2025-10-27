@@ -9,6 +9,6 @@ export async function getFoods(): Promise<Food[]> {
 
 // KEEP ONLY ONE default export to silence expo-router warning
 import React from 'react';
-export default function _FoodAPI_Placeholder(): JSX.Element | null {
+export default function _FoodAPI_Placeholder(): React.ReactElement | null {
   return null;
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import { tours } from '../../../src/data/tour';
-import TourCard from '../../components/TourCard';
+import { tours } from '../data/tour';
+import TourCard from './TourCard';
 
 export default function TourListScreen() {
   // nếu cần gọi API, sử dụng useEffect/useState ở đây

@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Button, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import TourListScreen from './components/TourListSrceen';
+import TourListScreen from '../../src/components/TourListSrceen';
 
 const Tab = createBottomTabNavigator();
 
@@ -96,11 +96,15 @@ export default function HomeScreen() {
         <Text style={styles.title}>Trang chủ</Text>
         <Button title="Xem chi tiết" onPress={() => router.push('/details')} />
 
-        <View style={{ flex: 1, width: '100%' }}>
+        {/* <View style={{ flex: 1, width: '100%' }}>
           <Tab.Navigator>
             <Tab.Screen name="Tours" component={TourListScreen} />
           </Tab.Navigator>
-        </View>
+        </View> */}
+         <View style={{ flex: 1, width: '100%' }}>
+            <TourListScreen />
+         </View>
+
       </View>
     </View>
   );

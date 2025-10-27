@@ -1,8 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Button } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import React from 'react';
+import { Button, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 // ============ STYLE ============
 
@@ -62,6 +62,7 @@ const styles = StyleSheet.create({
 
 
 export default function ExploreScreen() {
+    const router = useRouter();
   return (
     <View style={styles.container}>
         <View style={styles.header}>
@@ -81,6 +82,13 @@ export default function ExploreScreen() {
             style={styles.searchInput}
           />
         </View>
+
+         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+            <Button
+              title="Đi tới màn hình nhận diện món ăn"
+              onPress={() => router.push("/Api/FoodRecognitionScreen")}
+            />
+          </View>       
 
         {/* Nút bên phải */}
         <TouchableOpacity>
