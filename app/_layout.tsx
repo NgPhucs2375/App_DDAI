@@ -4,8 +4,9 @@ import { Stack } from 'expo-router';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { ActivityIndicator, View, Alert, Platform } from 'react-native';
+import { ActivityIndicator, Alert, View } from 'react-native';
 import { useColorScheme } from '../hooks/use-color-scheme';
+
 
 export default function Layout_Main() {
   const colorScheme = useColorScheme();
@@ -68,6 +69,8 @@ export default function Layout_Main() {
           <>
             <Stack.Screen name="login" options={{ headerShown: false }} />
             <Stack.Screen name="register" options={{ headerShown: false }} />
+            <Stack.Screen name="details" />
+            <Stack.Screen name="FoodRecognitionScreen" />
           </>
         )}
       </Stack>
