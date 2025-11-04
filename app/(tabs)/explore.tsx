@@ -86,7 +86,7 @@ export default function ExploreScreen() {
          <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
             <Button
               title="Đi tới màn hình nhận diện món ăn"
-              onPress={() => router.push("/Api/FoodRecognitionScreen")}
+              onPress={() => router.push("/FoodRecognitionScreen")}
             />
           </View>       
 
