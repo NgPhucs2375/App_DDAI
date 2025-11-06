@@ -12,7 +12,6 @@ import {
 } from "react-native";
 
 
-// Tạm thời, hãy dùng hằng số này.
 const CLARIFAI_API_KEY = "acfb3f32028545b9b1646ca29d9a6de2"; 
 
 
