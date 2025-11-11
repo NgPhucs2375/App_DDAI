@@ -42,6 +42,16 @@ export default function Layout_Tabs() {
           ),
         }} />
 
+        <Tabs.Screen
+        name="camera"
+        options={{
+          // TÊN GỢI Ý: Nên đổi thành "Cá nhân" hoặc "Tài khoản"
+          title: "Camera chụp ảnh", 
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+            <Ionicons name="person" size={size} color={color} />
+          ),
+        }} />
+
       <Tabs.Screen
         name="explore"
         options={{
@@ -49,9 +59,9 @@ export default function Layout_Tabs() {
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name="compass" size={size} color={color} />
           ),
-        }} />
+        }} /> 
 
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="profile"
         options={{
           // TÊN GỢI Ý: Nên đổi thành "Cá nhân" hoặc "Tài khoản"
@@ -59,9 +69,9 @@ export default function Layout_Tabs() {
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name="person" size={size} color={color} />
           ),
-        }} />
+        }} /> */}
 
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="food_recognition"
         options={{
           title: "Nhận diện", // Gợi ý: Rút gọn cho tab bar
@@ -69,7 +79,8 @@ export default function Layout_Tabs() {
             <Ionicons name="fast-food" size={size} color={color} />
           ),
         }}
-      />
+      /> */}
+      
     </Tabs>
   );
 }

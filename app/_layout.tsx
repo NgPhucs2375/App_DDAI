@@ -69,8 +69,8 @@ export default function Layout_Main() {
           <>
             <Stack.Screen name="login" options={{ headerShown: false }} />
             <Stack.Screen name="register" options={{ headerShown: false }} />
+            <Stack.Screen name="camera" />
             <Stack.Screen name="details" />
-            <Stack.Screen name="FoodRecognitionScreen" />
           </>
         )}
       </Stack>
