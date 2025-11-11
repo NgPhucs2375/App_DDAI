@@ -5,25 +5,39 @@
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+// App palette (light theme focus)
+export const Palette = {
+  primary: '#003049', // Header background, titles
+  secondary: '#669BBC', // Secondary accent (icons, inactive states)
+  accent: '#C1121F', // CTA / active tint
+  bg: '#F5F5F5', // Screen background
+  white: '#FFFFFF',
+  border: '#E0E0E0',
+  text: '#003049',
+};
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
+    text: Palette.text,
+    background: Palette.bg,
+    tint: Palette.accent,
+    icon: Palette.secondary,
+    tabIconDefault: Palette.secondary,
+    tabIconSelected: Palette.accent,
+    headerBackground: Palette.primary,
+    card: Palette.white,
+    border: Palette.border,
   },
   dark: {
     text: '#ECEDEE',
     background: '#151718',
-    tint: tintColorDark,
+    tint: '#FFD1CF',
     icon: '#9BA1A6',
     tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
+    tabIconSelected: '#FFD1CF',
+    headerBackground: '#0E141B',
+    card: '#1E252C',
+    border: '#2A3138',
   },
 };
 

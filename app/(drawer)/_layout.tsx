@@ -26,7 +26,7 @@ export default function DrawerLayout() {
         options={{
           drawerLabel: 'Trang Chính', // Tên sẽ hiển thị trong sidebar
           title: 'Trang Chính',
-          drawerIcon: ({ size, color }) => (
+          drawerIcon: ({ size, color }: { size: number; color: string }) => (
             <Ionicons name="home-outline" size={size} color={color} />
           ),
         }}
