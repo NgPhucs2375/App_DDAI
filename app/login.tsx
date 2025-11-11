@@ -47,59 +47,53 @@ const styles = StyleSheet.create({
 
 
 export default function LoginScreen(){
-    const [email,setEmail]=React.useState('');
-    const [password,setPassword]=React.useState('');
+  const [email,setEmail]=React.useState('');
+  const [password,setPassword]=React.useState('');
 
-    const handleLogin=()=>{
-        // check email 
-        const emailRegex=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-        // check rỗng
-        if(!email || !password){
-            Alert.alert('Vui lòng nhập đầy đủ thông tin');
-            return;
-        }
-        // check định dạng email
-        if(!emailRegex.test(email)){
-            Alert.alert('Email không hợp lệ');
-            return;
-        }
-        // Ví dụ xác thực đơn giản (sau có thể thay bằng gọi API)
-        // TEST tạm thời
-        if (email === 'admin@gmail.com' && password === '123456') {
-        Alert.alert('Thành công', 'Đăng nhập thành công!');
-        router.replace('/(tabs)'); // chuyển sang layout Tabs
-        } else {
-        Alert.alert('Lỗi', 'Email hoặc mật khẩu sai!');
-        }
-        return (
-            <View style={styles.container}>
-                <Text style={styles.title}>Đăng Nhập</Text>
-
-                <TextInput
-                    placeholder='Email'
-                    value={email}
-                    onChangeText={setEmail}
-                    style={styles.input}
-                    keyboardType='email-address'
-                    />
-                 <TextInput
-                    placeholder='Mật khẩu'
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry
-                    style={styles.input}
-                    />
-
-                    <TouchableOpacity style={styles.button} onPress={handleLogin}>
-                        <Text style={styles.buttonText}>Đăng Nhập</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => router.push('/register')}>
-                        <Text style={styles.link}>Chưa có tài khoản? Đăng ký</Text>
-                    </TouchableOpacity>
-
-            </View>
-
-        );
+  const handleLogin=()=>{
+    const emailRegex=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if(!email || !password){
+      Alert.alert('Vui lòng nhập đầy đủ thông tin');
+      return;
     }
+    if(!emailRegex.test(email)){
+      Alert.alert('Email không hợp lệ');
+      return;
+    }
+    if (email === 'admin@gmail.com' && password === '123456') {
+      Alert.alert('Thành công', 'Đăng nhập thành công!');
+      router.replace('/'); // chuyển sang root (drawer chứa tabs)
+    } else {
+      Alert.alert('Lỗi', 'Email hoặc mật khẩu sai!');
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Đăng Nhập</Text>
+
+      <TextInput
+        placeholder='Email'
+        value={email}
+        onChangeText={setEmail}
+        style={styles.input}
+        keyboardType='email-address'
+        autoCapitalize='none'
+      />
+      <TextInput
+        placeholder='Mật khẩu'
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+        style={styles.input}
+      />
+
+      <TouchableOpacity style={styles.button} onPress={handleLogin}>
+        <Text style={styles.buttonText}>Đăng Nhập</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => router.push('/register')}>
+        <Text style={styles.link}>Chưa có tài khoản? Đăng ký</Text>
+      </TouchableOpacity>
+    </View>
+  );
 }

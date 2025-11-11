@@ -1,7 +1,7 @@
-import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
+import React from 'react';
+import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -22,7 +22,7 @@ export default function RegisterScreen() {
       // Lưu trạng thái đăng nhập đơn giản
       await AsyncStorage.setItem('isLoggedIn', 'true');
       // (Tuỳ app bạn có thể lưu token / user ở đây)
-      router.replace('/(tabs)');
+  router.replace('/'); // chuyển sang root layout chứa drawer + tabs
     } catch (e) {
       console.error(e);
       setError('Đăng ký thất bại, thử lại');
