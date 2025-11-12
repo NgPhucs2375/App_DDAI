@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import React from 'react';
 import { Button, StyleSheet, Text, View } from 'react-native';
 import AppHeader from '../../../components/AppHeader';
@@ -36,7 +36,7 @@ export default function ExploreScreen() {
       <View style={{ padding: 16 }}>
         <Button
           title="Đi tới màn hình nhận diện món ăn"
-          onPress={() => router.push('/food_recognition')}
+          onPress={() => router.push('/(drawer)/(tabs)/food_recognition' as Href)}
         />
       </View>
       <Text style={styles.text}>Khám phá thế giới 🌏</Text>
