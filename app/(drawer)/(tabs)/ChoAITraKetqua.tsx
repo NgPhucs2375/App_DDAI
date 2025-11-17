@@ -1,21 +1,19 @@
 import React from 'react';
-import { View, StyleSheet, SafeAreaView, Button } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import AppHeader from '../../../components/AppHeader';
-import { Colors } from '../../../constants/theme';
+import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
 
-// Màu sắc dựa trên hình ảnh
-const PRIMARY_BLUE = '#007AFF'; // Xanh dương cơ bản
+// Màu sắc dựa trên hình ảnh (hơi khác so với ảnh trước)
+const LIGHT_BLUE = '#7DD3FC'; // Xanh dương nhạt
+const DARK_BLUE = '#38BDF8'; // Xanh dương đậm cho phần dưới cùng
 const BACKGROUND_GREY = '#D8D8D8'; // Xám nền
 
-export default function BasicLayout() {
+export default function ImageDetailLayout() {
   return (
     // 1. SafeAreaView: Đảm bảo nội dung không bị che bởi notch/thanh trạng thái.
     <SafeAreaView style={styles.safeArea}>
       {/* 2. Main Container: View bao ngoài cùng, chiếm toàn bộ không gian. */}
       <View style={styles.container}>
 
-        {/* 3. UPPER SECTION (Phần trên): Chứa Header và Main Content */}
+        {/* 3. UPPER SECTION (Phần trên): Chứa Header và Main Content Box */}
         <View style={styles.upperSection}>
 
           {/* 3.1. Header / Navbar (Thanh trên cùng) */}
@@ -24,14 +22,19 @@ export default function BasicLayout() {
             <View style={styles.headerInput} />
           </View>
 
-          {/* 3.2. Main Content Box (Hộp nội dung chính màu xanh) */}
+          {/* 3.2. Main Content Box (Hộp nội dung chính màu xanh nhạt) */}
           <View style={styles.mainContentBox}>
-            {/* Vị trí của hình oval lớn */}
-            <View style={styles.ovalShape} />
+            {/* Vị trí của ô ảnh (hình vuông trắng) */}
+            <View style={styles.imagePlaceholder} />
+
+            {/* Thanh hiển thị trạng thái "Đang phân tích dữ liệu" */}
+            <View style={styles.analysisBar}>
+              <Text style={styles.analysisText}>Đang phân tích dữ liệu</Text>
+            </View>
           </View>
         </View>
 
-        {/* 4. BOTTOM BAR / FOOTER (Thanh dưới cùng) */}
+        {/* 4. BOTTOM BAR / FOOTER (Thanh dưới cùng màu xanh đậm) */}
         <View style={styles.bottomBar}>
           <View style={styles.bottomSquare} />
           <View style={styles.bottomCircle} />
@@ -72,24 +75,25 @@ const styles = StyleSheet.create({
   headerSquare: {
     width: 30,
     height: 30,
-    backgroundColor: PRIMARY_BLUE,
+    backgroundColor: LIGHT_BLUE, // Sử dụng màu xanh nhạt
     borderRadius: 5, // Góc bo tròn nhẹ
     marginRight: 10,
   },
   headerInput: {
     flex: 1, // Chiếm phần không gian còn lại
     height: 30,
-    backgroundColor: PRIMARY_BLUE,
+    backgroundColor: LIGHT_BLUE, // Sử dụng màu xanh nhạt
     borderRadius: 15, // Góc bo tròn để trông giống thanh input
   },
 
-  // 3.2. Main Content Box (Hộp xanh lớn)
+  // 3.2. Main Content Box (Hộp xanh nhạt lớn)
   mainContentBox: {
     flex: 1, // Chiếm toàn bộ không gian còn lại trong upperSection
-    backgroundColor: PRIMARY_BLUE,
+    backgroundColor: LIGHT_BLUE, // Màu xanh nhạt
     borderRadius: 20, // Bo góc lớn
-    justifyContent: 'center', // Căn giữa hình oval theo chiều dọc
-    alignItems: 'center', // Căn giữa hình oval theo chiều ngang
+    padding: 20, // Khoảng đệm bên trong hộp
+    alignItems: 'center', // Căn giữa các item con theo chiều ngang
+    justifyContent: 'space-between', // Phân bố đều các item con theo chiều dọc
     elevation: 5, // Thêm đổ bóng (Android)
     shadowColor: '#000', // Đổ bóng (iOS)
     shadowOffset: { width: 0, height: 2 },
@@ -97,14 +101,28 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   
-  // Hình Oval
-  ovalShape: {
-    width: '80%', // Chiếm 80% chiều rộng của hộp chứa
-    height: '90%', // Chiếm 90% chiều cao của hộp chứa
+  // Ô Ảnh (hình vuông trắng)
+  imagePlaceholder: {
+    width: '90%', // Chiếm 90% chiều rộng của hộp chứa
+    height: '60%', // Chiếm 60% chiều cao của hộp chứa
     backgroundColor: 'white',
-    borderRadius: 999, // Giá trị lớn để tạo thành hình tròn/oval
-    // Dùng transform để kéo dãn thành hình oval nếu cần, nhưng borderRadius cao
-    // sẽ tự tạo ra hình oval dựa trên kích thước width/height của nó.
+    borderRadius: 10, // Góc bo tròn cho ảnh
+    marginBottom: 20, // Khoảng cách với thanh phân tích
+  },
+
+  // Thanh "Đang phân tích dữ liệu"
+  analysisBar: {
+    width: '90%',
+    height: 50,
+    backgroundColor: 'white',
+    borderRadius: 10,
+    justifyContent: 'center', // Căn giữa chữ theo chiều dọc
+    alignItems: 'center', // Căn giữa chữ theo chiều ngang
+  },
+  analysisText: {
+    color: '#000', // Màu chữ đen
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 
   // ----------------------------------------------------
@@ -112,7 +130,7 @@ const styles = StyleSheet.create({
   // ----------------------------------------------------
   bottomBar: {
     height: 80, // Chiều cao cố định
-    backgroundColor: PRIMARY_BLUE,
+    backgroundColor: DARK_BLUE, // Màu xanh đậm
     borderRadius: 20, // Bo góc lớn
     flexDirection: 'row',
     alignItems: 'center',
