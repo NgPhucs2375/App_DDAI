@@ -9,28 +9,81 @@ export default function DrawerLayout() {
   return (
     <Drawer
       screenOptions={{
-        headerShown: false, // Ẩn header mặc định, vì HomeScreen của bạn đã có
-        drawerStyle: {
-          backgroundColor: '#f8f8f8',
-          width: 260, // Bạn có thể đổi độ rộng của sidebar ở đây
-        },
-        drawerActiveTintColor: '#0288D1', // Màu chữ khi được chọn
-        drawerLabelStyle: {
-          fontSize: 16,
-        },
+        headerShown: false,
+        drawerStyle: { backgroundColor: '#f8f8f8', width: 260 },
+        drawerActiveTintColor: '#0288D1',
+        drawerLabelStyle: { fontSize: 16 },
       }}
     >
-      {/* Dòng này trỏ đến toàn bộ cụm Tabs của bạn */}
+      {/* Nhóm Tabs (trang chủ, explore, profile trong tab bar) */}
       <Drawer.Screen
-        name="(tabs)" // Tên này phải khớp với tên thư mục (tabs) của bạn
+        name="(tabs)"
         options={{
-          drawerLabel: 'Trang Chính', // Tên sẽ hiển thị trong sidebar
-          title: 'Trang Chính',
+          drawerLabel: 'Trang chủ',
+          title: 'Trang chủ',
           drawerIcon: ({ size, color }: { size: number; color: string }) => (
             <Ionicons name="home-outline" size={size} color={color} />
           ),
         }}
       />
+
+      {/* PROFILE trong Drawer */}
+      <Drawer.Screen
+        name="profile"
+        options={{
+          drawerLabel: 'Hồ sơ',
+          title: 'Hồ sơ',
+          drawerIcon: ({ size, color }: { size: number; color: string }) => (
+            <Ionicons name="person-outline" size={size} color={color} />
+          ),
+        }}
+      />
+
+      {/* Nhật ký bữa ăn */}
+      <Drawer.Screen
+        name="meal-log"
+        options={{
+          drawerLabel: 'Nhật ký bữa ăn',
+          title: 'Nhật ký bữa ăn',
+          drawerIcon: ({ size, color }: { size: number; color: string }) => (
+            <Ionicons name="restaurant-outline" size={size} color={color} />
+          ),
+        }}
+      />
+
+      {/* Lịch sử bữa ăn */}
+      <Drawer.Screen
+        name="meal-history"
+        options={{
+          drawerLabel: 'Lịch sử bữa ăn',
+          title: 'Lịch sử bữa ăn',
+          drawerIcon: ({ size, color }: { size: number; color: string }) => (
+            <Ionicons name="time-outline" size={size} color={color} />
+          ),
+        }}
+      />
+
+      {/* Công thức nấu ăn */}
+      <Drawer.Screen
+        name="recipes"
+        options={{
+          drawerLabel: 'Công thức',
+          title: 'Công thức nấu ăn',
+          drawerIcon: ({ size, color }: { size: number; color: string }) => (
+            <Ionicons name="book-outline" size={size} color={color} />
+          ),
+        }}
+      />
+
+      {/** Ẩn route dư thừa nếu còn tồn tại file profile-screen.tsx */}
+      <Drawer.Screen
+        name="profile-screen"
+        options={{
+          href: null, // ẩn khỏi Drawer và deep links
+          drawerItemStyle: { display: 'none' },
+        }}
+      />
+ 
       
       {/* SAU NÀY: Nếu bạn muốn thêm màn hình khác vào sidebar 
         (ví dụ: "Cài đặt"), bạn sẽ tạo tệp `app/(drawer)/settings.tsx`

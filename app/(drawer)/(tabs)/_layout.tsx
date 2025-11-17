@@ -37,6 +37,8 @@ export default function Layout_Tabs() {
         name="details"
         options={{
           title: "Thông tin chi tiết",
+          // Không muốn hiện trong tab bar
+          href: null,
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name="document-text" size={size} color={color} />
           ),
@@ -79,8 +81,30 @@ export default function Layout_Tabs() {
             <Ionicons name="fast-food" size={size} color={color} />
           ),
         }}
+<<<<<<< HEAD
       /> */}
       
+=======
+      />
+
+      {/** Ẩn các màn hình phụ khỏi thanh tab, vẫn có thể navigate tới */}
+      <Tabs.Screen
+        name="FoodRecognitionScreen"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="MealLog"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="MealHistory"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="Recipes"
+        options={{ href: null }}
+      />
+>>>>>>> df628b3833707fd43700f08e17ee4cb436d638f2
     </Tabs>
   );
 }
