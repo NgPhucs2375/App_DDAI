@@ -61,10 +61,14 @@ export default function LoginScreen(){
       return;
     }
     if (email === 'admin@gmail.com' && password === '123456') {
+      Alert.alert('Chào Admin', 'Đang chuyển đến trang quản trị...');
+      router.replace('/admin/dashboard' as any); // Chuyển sang Dashboard Admin
+    } else if (emailRegex.test(email)) { // User thường
       Alert.alert('Thành công', 'Đăng nhập thành công!');
-      router.replace('/'); // chuyển sang root (drawer chứa tabs)
+      router.replace('/'); 
     } else {
-      Alert.alert('Lỗi', 'Email hoặc mật khẩu sai!');
+      Alert.alert('Lỗi', 'Thông tin đăng nhập không đúng');
+    
     }
   };
 

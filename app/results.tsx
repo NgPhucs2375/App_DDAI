@@ -102,15 +102,37 @@ export default function AnalysisResultScreen() {
     }
   };
 
-  const generateMockNutrition = (name: string) => {
-    const cal = Math.floor(Math.random() * 300) + 200; 
-    setNutritionData([
-      { label: 'Calories', value: `${cal} kcal`, percentage: '100%', color: Colors.light.tint },
-      { label: 'Protein', value: '25g', percentage: '35%', color: '#E9C46A' },
-      { label: 'Carbs', value: '45g', percentage: '50%', color: '#2A9D8F' },
-      { label: 'Fat', value: '12g', percentage: '15%', color: '#F4A261' },
-    ]);
-  };
+// DATABASE GIẢ LẬP (Dictionary)
+const FOOD_DB: Record<string, any> = {
+  'pho': { cal: 450, pro: 20, carb: 60, fat: 12, label: 'Phở Bò' },
+  'burger': { cal: 550, pro: 25, carb: 45, fat: 28, label: 'Hamburger' },
+  'pizza': { cal: 280, pro: 12, carb: 35, fat: 10, label: 'Pizza (1 lát)' },
+  'salad': { cal: 150, pro: 5, carb: 10, fat: 8, label: 'Salad Rau' },
+  'rice': { cal: 300, pro: 6, carb: 60, fat: 2, label: 'Cơm Trắng' },
+  'egg': { cal: 70, pro: 6, carb: 1, fat: 5, label: 'Trứng Luộc' },
+};
+
+const generateMockNutrition = (name: string) => {
+  // Tìm kiếm trong DB (so sánh tương đối)
+  const key = Object.keys(FOOD_DB).find(k => name.toLowerCase().includes(k)) || 'unknown';
+  
+  let data;
+  if (key !== 'unknown') {
+    data = FOOD_DB[key];
+    setFoodName(data.label); // Cập nhật tên tiếng Việt đẹp hơn
+  } else {
+    // Fallback nếu không tìm thấy: Random nhưng có logic
+    data = { cal: 200, pro: 10, carb: 20, fat: 5 }; 
+    setFoodName(name); // Giữ nguyên tên tiếng Anh từ AI
+  }
+
+  setNutritionData([
+    { label: 'Calories', value: `${data.cal} kcal`, percentage: '100%', color: Colors.light.tint },
+    { label: 'Protein', value: `${data.pro}g`, percentage: '30%', color: '#E9C46A' },
+    { label: 'Carbs', value: `${data.carb}g`, percentage: '50%', color: '#2A9D8F' },
+    { label: 'Fat', value: `${data.fat}g`, percentage: '20%', color: '#F4A261' },
+  ]);
+};
 
   return (
     <SafeAreaView style={styles.safeArea}>
