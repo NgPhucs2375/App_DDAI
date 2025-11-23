@@ -91,6 +91,9 @@ export default function LoginScreen(){
       <TouchableOpacity style={styles.button} onPress={handleLogin}>
         <Text style={styles.buttonText}>Đăng Nhập</Text>
       </TouchableOpacity>
+      <TouchableOpacity onPress={() => router.push('/forgot-password')} style={{ marginBottom: 15 }}>
+        <Text style={{ color: '#555', textAlign: 'center' }}>Quên mật khẩu?</Text>
+      </TouchableOpacity>
       <TouchableOpacity onPress={() => router.push('/register')}>
         <Text style={styles.link}>Chưa có tài khoản? Đăng ký</Text>
       </TouchableOpacity>

@@ -75,14 +75,7 @@ export default function DrawerLayout() {
         }}
       />
 
-      {/** Ẩn route dư thừa nếu còn tồn tại file profile-screen.tsx */}
-      <Drawer.Screen
-        name="profile-screen"
-        options={{
-          href: null, // ẩn khỏi Drawer và deep links
-          drawerItemStyle: { display: 'none' },
-        }}
-      />
+      {/** (đã dọn) profile-screen.tsx – không còn cần ẩn route dư thừa */}
  
       
       {/* SAU NÀY: Nếu bạn muốn thêm màn hình khác vào sidebar 

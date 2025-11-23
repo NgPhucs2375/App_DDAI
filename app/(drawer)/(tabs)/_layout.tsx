@@ -2,25 +2,23 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
 
+// Màu sắc ví dụ (bạn có thể dùng file Colors của mình)
+const TINT_COLOR = '#C1121F';
+const SECONDARY_COLOR = '#669BBC';
+const TAB_BACKGROUND = '#FFFFFF';
+
 export default function Layout_Tabs() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: false, // Tốt! Giữ nguyên vì bạn có header tùy chỉnh riêng
-        
-        // Các dòng này không còn tác dụng vì header đã bị ẩn
-        // headerStyle:{backgroundColor:'#1abc9c'},
-        // headerTintColor:'white',
-
-        // ===== ĐIỀU CHỈNH MÀU SẮC TAB BAR =====
+        headerShown: false,
+        tabBarActiveTintColor: TINT_COLOR,
+        tabBarInactiveTintColor: SECONDARY_COLOR,
         tabBarStyle: {
-          backgroundColor: '#FFFFFF', // 1. Nền trắng sạch sẽ, hiện đại
-          borderTopColor: '#E0E0E0', // Thêm 1 đường viền mỏng cho đẹp
+          backgroundColor: TAB_BACKGROUND,
+          borderTopColor: '#E0E0E0',
           borderTopWidth: 1,
         },
-        tabBarActiveTintColor: '#C1121F',   // 2. Màu nhấn (Crimson Blaze) khi tab được chọn
-        tabBarInactiveTintColor: '#669BBC', // 3. Màu phụ (Blue Marble) khi tab không được chọn
-        // =====================================
       }}
     >
       <Tabs.Screen
@@ -28,83 +26,71 @@ export default function Layout_Tabs() {
         options={{
           title: 'Trang chủ',
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <Ionicons name="home" size={size} color={color} />
+            <Ionicons name="home-outline" size={size} color={color} />
           ),
         }}
       />
 
       <Tabs.Screen
-        name="details"
+        name="(tab)/MealHistory" // Cần file (tabs)/history.tsx
         options={{
-          title: "Thông tin chi tiết",
-          // Không muốn hiện trong tab bar
-          href: null,
+          title: 'Nhật ký',
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <Ionicons name="document-text" size={size} color={color} />
+            <Ionicons name="calendar-outline" size={size} color={color} />
           ),
-        }} />
+        }}
+      />
 
-        <Tabs.Screen
-        name="camera"
+      {/* ================================================= */}
+      {/* NÚT "THÊM" TRUNG TÂM */}
+      {/* ================================================= */}
+      <Tabs.Screen
+        name="(add)/index" // Cần thư mục (tabs)/(add)/index.tsx
         options={{
-          // TÊN GỢI Ý: Nên đổi thành "Cá nhân" hoặc "Tài khoản"
-          title: "Camera chụp ảnh", 
+          title: 'Thêm',
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <Ionicons name="person" size={size} color={color} />
+            <Ionicons
+              name="add-circle"
+              size={size * 1.5} // Icon lớn hơn bình thường
+              color={TINT_COLOR} // Luôn có màu nhấn
+            />
           ),
-        }} />
+          tabBarLabel: () => null, // Ẩn chữ "Thêm"
+        }}
+      />
+      {/* ================================================= */}
 
       <Tabs.Screen
         name="explore"
         options={{
-          title: "Khám phá",
+          title: 'Khám phá',
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <Ionicons name="compass" size={size} color={color} />
-          ),
-        }} /> 
-
-      {/* <Tabs.Screen
-        name="profile"
-        options={{
-          // TÊN GỢI Ý: Nên đổi thành "Cá nhân" hoặc "Tài khoản"
-          title: "Cá nhân", 
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <Ionicons name="person" size={size} color={color} />
-          ),
-        }} /> */}
-
-      {/* <Tabs.Screen
-        name="food_recognition"
-        options={{
-          title: "Nhận diện", // Gợi ý: Rút gọn cho tab bar
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <Ionicons name="fast-food" size={size} color={color} />
+            <Ionicons name="compass-outline" size={size} color={color} />
           ),
         }}
-<<<<<<< HEAD
-      /> */}
-      
-=======
       />
 
-      {/** Ẩn các màn hình phụ khỏi thanh tab, vẫn có thể navigate tới */}
       <Tabs.Screen
-        name="FoodRecognitionScreen"
-        options={{ href: null }}
+        name="profile" // Cần file (tabs)/profile.tsx
+        options={{
+          title: 'Hồ sơ',
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+            <Ionicons name="person-outline" size={size} color={color} />
+          ),
+        }}
       />
-      <Tabs.Screen
-        name="MealLog"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="MealHistory"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="Recipes"
-        options={{ href: null }}
-      />
->>>>>>> df628b3833707fd43700f08e17ee4cb436d638f2
+
+      {/* Ẩn tất cả các màn hình phụ khác khỏi tab bar */}
+      <Tabs.Screen name="details" options={{ href: null }} />
+      <Tabs.Screen name="food_recognition" options={{ href: null }} />
+      <Tabs.Screen name="MealLog" options={{ href: null }} />
+      <Tabs.Screen name="camera" options={{ href: null }} />
+      <Tabs.Screen name="Recipes" options={{ href: null }} />
+      <Tabs.Screen name="MealHistory" options={{ href: null }} />
+      <Tabs.Screen name="KetQuaAI" options={{ href: null }} />
+      <Tabs.Screen name="ChoAITraKetqua" options={{ href: null }} />
+      {/* ... ẩn tất cả các file khác nếu cần ... */}
+
     </Tabs>
   );
 }
