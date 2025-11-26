@@ -1,150 +1,144 @@
 import AppHeader from '@/components/AppHeader';
 import { Colors } from '@/constants/theme';
-import { loadProfile } from '@/src/data/profileStore';
+import { loadMeals } from '@/src/data/mealStore';
+import { useUserStore } from '@/src/store/userStore';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics'; // 1. Import Rung
 import { Href, useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { PieChart } from 'react-native-chart-kit'; // 2. Import Biểu đồ
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [goal, setGoal] = useState(2000); // Mặc định 2000 kcal
-  
-  // Mockup dữ liệu đã ăn hôm nay
-  // (Sau này bạn có thể tính tổng từ MealHistory thật)
-  const [eaten, setEaten] = useState({
-    calories: 1250, // Thử sửa số này thành 2500 để test cảnh báo đỏ
-    protein: 90, 
-    carbs: 150,
-    fat: 40,
-  });
+  const goal = useUserStore(state => state.profile?.goals?.dailyCalories ?? 2000);
+  const [eaten, setEaten] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 });
 
-  // Tải mục tiêu calo từ Profile
+  const calculateEatenStats = useCallback(async () => {
+    const meals = await loadMeals();
+    const totalCalories = meals.reduce((sum, meal) => sum + (meal.calories || 0), 0);
+    
+    // Giả lập tính Macros (Vì hiện tại DB chỉ lưu calo, sau này API thật sẽ trả về số này)
+    // Tỷ lệ giả định: Pro 20%, Carb 50%, Fat 30%
+    setEaten({
+        calories: totalCalories,
+        protein: Math.round(totalCalories * 0.05), 
+        carbs: Math.round(totalCalories * 0.12),  
+        fat: Math.round(totalCalories * 0.03),    
+    });
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
-      loadProfile().then(p => {
-        if (p?.goals?.dailyCalories) setGoal(p.goals.dailyCalories);
-      });
-    }, [])
+      calculateEatenStats();
+    }, [calculateEatenStats])
   );
 
   const remaining = goal - eaten.calories;
   const progress = Math.min(eaten.calories / goal, 1);
-  
-  // --- LOGIC 1: CẢNH BÁO VƯỢT CALO ---
   const isOverLimit = remaining < 0;
 
-  // --- LOGIC 2: GỢI Ý THỰC ĐƠN THÔNG MINH ---
-  const getSuggestion = () => {
-    if (isOverLimit) {
-      return { 
-        title: 'Trà Thảo Mộc Thanh Lọc', 
-        sub: '0 kcal • Giúp tiêu hóa • Đốt mỡ thừa',
-        icon: 'leaf' 
-      };
-    }
-    if (remaining < 300) {
-      return { 
-        title: 'Salad Ức Gà Nhẹ Nhàng', 
-        sub: '250 kcal • Ít Carb • 10 phút chuẩn bị',
-        icon: 'restaurant'
-      };
-    }
-    if (remaining > 800) {
-      return { 
-        title: 'Cơm Gà Nướng & Rau Củ', 
-        sub: '650 kcal • Đầy đủ dinh dưỡng • 30 phút',
-        icon: 'flame'
-      };
-    }
-    return { 
-      title: 'Bún Bò Huế (Vừa)', 
-      sub: '500 kcal • Đậm đà • Nhiều Protein',
-      icon: 'bowl' // Lưu ý: bowl có thể không có trong bộ icon cơ bản, dùng restaurant thay thế nếu lỗi
-    };
-  };
+  // --- DATA CHO BIỂU ĐỒ TRÒN (SCIENTIFIC) ---
+  const pieData = [
+    { name: 'Đạm', population: eaten.protein, color: '#E9C46A', legendFontColor: '#7F7F7F', legendFontSize: 12 },
+    { name: 'Tinh bột', population: eaten.carbs, color: '#2A9D8F', legendFontColor: '#7F7F7F', legendFontSize: 12 },
+    { name: 'Béo', population: eaten.fat, color: '#F4A261', legendFontColor: '#7F7F7F', legendFontSize: 12 },
+  ];
 
+  // Logic Gợi ý
+  const getSuggestion = () => {
+    if (isOverLimit) return { title: 'Trà Thảo Mộc', sub: '0 kcal • Thanh lọc', icon: 'leaf' };
+    if (remaining < 300) return { title: 'Salad Ức Gà', sub: '250 kcal • Nhẹ bụng', icon: 'restaurant' };
+    return { title: 'Cơm Gà Nướng', sub: '650 kcal • Đủ chất', icon: 'restaurant' };
+  };
   const suggestion = getSuggestion();
+
+  // Hàm xử lý rung khi bấm nút
+  const handlePressReport = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); // Rung nhẹ
+    router.push('/reports' as Href);
+  };
 
   return (
     <View style={styles.container}>
       <AppHeader />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         
-        {/* HEADER & BÁO CÁO */}
+        {/* Header */}
         <View style={styles.headerSection}>
           <View>
             <Text style={styles.dateText}>Hôm nay, {new Date().toLocaleDateString('vi-VN')}</Text>
-            <Text style={styles.greeting}>Tiến độ trong ngày 📊</Text>
+            <Text style={styles.greeting}>Tiến độ 📊</Text>
           </View>
-          
-          <TouchableOpacity 
-            style={styles.reportBtn} 
-            onPress={() => router.push('/reports' as Href)} 
-          >
+          <TouchableOpacity style={styles.reportBtn} onPress={handlePressReport}>
             <Ionicons name="stats-chart-outline" size={20} color={Colors.light.tint} />
-            <Text style={styles.reportText}>Thống kê</Text>
+            <Text style={styles.reportText}>Chi tiết</Text>
           </TouchableOpacity>
         </View>
 
-        {/* --- UI CẢNH BÁO (HIỆN KHI VƯỢT MỨC) --- */}
+        {/* Cảnh báo */}
         {isOverLimit && (
           <View style={styles.warningBox}>
             <Ionicons name="alert-circle" size={24} color="#D32F2F" />
-            <Text style={styles.warningText}>
-              Bạn đã vượt quá mục tiêu {Math.abs(remaining)} kcal!
-            </Text>
+            <Text style={styles.warningText}>Vượt quá {Math.abs(remaining)} kcal!</Text>
           </View>
         )}
 
-        {/* SUMMARY CARD */}
+        {/* CARD TỔNG QUAN (Calo + Pie Chart) */}
         <View style={styles.summaryCard}>
-          <View style={styles.calorieRow}>
-            <View>
-              <Text style={styles.calLabel}>Đã ăn</Text>
-              <Text style={styles.calValue}>{eaten.calories}</Text>
-            </View>
-            
-            <View style={styles.ring}>
-                <Text style={[styles.ringText, isOverLimit && {color: '#D32F2F'}]}>
-                  {isOverLimit ? `+${Math.abs(remaining)}` : remaining}
+          <View style={styles.rowBetween}>
+             {/* Bên trái: Calo */}
+             <View>
+                <Text style={styles.label}>Mục tiêu: {goal}</Text>
+                <Text style={[styles.bigNumber, isOverLimit && {color: '#D32F2F'}]}>
+                    {eaten.calories} <Text style={styles.unit}>kcal</Text>
                 </Text>
-                <Text style={styles.ringSub}>{isOverLimit ? 'Vượt mức' : 'Còn lại'}</Text>
-            </View>
+                <Text style={styles.subLabel}>{isOverLimit ? 'Vượt mức' : 'Đã nạp'}</Text>
+                
+                {/* Thanh Progress nhỏ */}
+                <View style={styles.miniProgressBg}>
+                    <View style={[styles.miniProgressFill, { width: `${progress * 100}%`, backgroundColor: isOverLimit ? '#D32F2F' : Colors.light.tint }]} />
+                </View>
+             </View>
 
-            <View>
-              <Text style={styles.calLabel}>Mục tiêu</Text>
-              <Text style={styles.calValue}>{goal}</Text>
-            </View>
+             {/* Bên phải: Biểu đồ tròn Macros */}
+             <View style={{marginLeft: -20}}>
+                <PieChart
+                    data={pieData}
+                    width={160}
+                    height={100}
+                    chartConfig={{ color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})` }}
+                    accessor={"population"}
+                    backgroundColor={"transparent"}
+                    paddingLeft={"15"}
+                    hasLegend={false} // Ẩn chú thích mặc định để tự làm đẹp hơn
+                    center={[35, 0]}
+                    absolute
+                />
+                {/* Chú thích nhỏ dưới biểu đồ */}
+                <Text style={styles.chartNote}>Tỷ lệ dinh dưỡng</Text>
+             </View>
           </View>
 
-          <View style={styles.progressBarBg}>
-            <View 
-              style={[
-                styles.progressBarFill, 
-                { width: `${progress * 100}%`, backgroundColor: isOverLimit ? '#D32F2F' : Colors.light.tint }
-              ]} 
-            />
+          {/* Chú thích Macros đẹp hơn */}
+          <View style={styles.macroLegend}>
+             <LegendItem color="#E9C46A" label="Đạm" value={`${eaten.protein}g`} />
+             <LegendItem color="#2A9D8F" label="Carb" value={`${eaten.carbs}g`} />
+             <LegendItem color="#F4A261" label="Béo" value={`${eaten.fat}g`} />
           </View>
         </View>
 
-        {/* MACROS */}
-        <View style={styles.macroRow}>
-            <MacroCard label="Protein" value={`${eaten.protein}g`} color="#E9C46A" />
-            <MacroCard label="Carbs" value={`${eaten.carbs}g`} color="#2A9D8F" />
-            <MacroCard label="Fat" value={`${eaten.fat}g`} color="#F4A261" />
-        </View>
-
-        {/* GỢI Ý THÔNG MINH */}
-        <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Gợi ý cho bạn 💡</Text>
-            <TouchableOpacity onPress={() => router.push('/(drawer)/(tabs)/Recipes' as Href)}>
-                <Text style={styles.seeAll}>Xem tất cả</Text>
-            </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity style={styles.suggestionCard}>
-            <Ionicons name={suggestion.icon as any || 'restaurant'} size={28} color={Colors.light.tint} />
+        {/* Gợi ý thông minh */}
+        <Text style={styles.sectionTitle}>Gợi ý tiếp theo 💡</Text>
+        <TouchableOpacity style={styles.suggestionCard} onPress={() => {
+            Haptics.selectionAsync(); // Rung phản hồi
+            router.push('/(drawer)/(tabs)/Recipes' as Href);
+        }}>
+            <View style={[styles.iconBox, { backgroundColor: '#E3F2FD' }]}>
+                <Ionicons name={suggestion.icon as any} size={24} color={Colors.light.tint} />
+            </View>
             <View style={styles.suggestionContent}>
                 <Text style={styles.suggestionTitle}>{suggestion.title}</Text>
                 <Text style={styles.suggestionSub}>{suggestion.sub}</Text>
@@ -154,113 +148,58 @@ export default function HomeScreen() {
 
       </ScrollView>
 
-      {/* --- NÚT CHATBOT (FAB) --- */}
-      <TouchableOpacity 
-        style={styles.fab} 
-        onPress={() => router.push('/chatbot' as Href)}
-      >
-        <Ionicons name="chatbubble-ellipses" size={24} color="#fff" />
+      {/* Nút Chatbot FAB */}
+      <TouchableOpacity style={styles.fab} onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          router.push('/chatbot' as Href);
+      }}>
+        <Ionicons name="chatbubbles" size={26} color="#fff" />
       </TouchableOpacity>
-
     </View>
   );
 }
 
-const MacroCard = ({ label, value, color }: { label: string, value: string, color: string }) => (
-    <View style={[styles.macroCard, { borderLeftColor: color }]}>
-        <Text style={styles.macroLabel}>{label}</Text>
-        <Text style={styles.macroValue}>{value}</Text>
+const LegendItem = ({ color, label, value }: { color: string, label: string, value: string }) => (
+    <View style={{flexDirection: 'row', alignItems: 'center', marginRight: 15}}>
+        <View style={{width: 10, height: 10, borderRadius: 5, backgroundColor: color, marginRight: 5}} />
+        <Text style={{fontSize: 12, color: '#555'}}>{label} <Text style={{fontWeight: 'bold'}}>{value}</Text></Text>
     </View>
 );
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.light.background },
-  content: { padding: 20, paddingBottom: 80 }, // Padding bottom để không bị nút Chatbot che
+  container: { flex: 1, backgroundColor: '#F7F9FC' }, // Màu nền sáng hiện đại hơn
+  content: { padding: 20, paddingBottom: 90 },
   
-  headerSection: { 
-    marginBottom: 20, 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'flex-end' 
-  },
-  dateText: { color: '#888', fontSize: 14, textTransform: 'uppercase' },
-  greeting: { fontSize: 24, fontWeight: 'bold', color: Colors.light.text },
+  headerSection: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20 },
+  dateText: { color: '#888', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1 },
+  greeting: { fontSize: 26, fontWeight: '800', color: '#1A1A1A' },
   
-  reportBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF0F0',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-  },
-  reportText: { color: Colors.light.tint, fontWeight: '600', marginLeft: 4, fontSize: 14 },
+  reportBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1, borderColor: '#eee' },
+  reportText: { color: Colors.light.tint, fontWeight: '600', marginLeft: 4, fontSize: 13 },
 
-  // Style mới cho Cảnh báo
-  warningBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFEBEE',
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#FFCDD2'
-  },
-  warningText: { color: '#D32F2F', fontWeight: 'bold', marginLeft: 10, flex: 1 },
+  warningBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFEBEE', padding: 12, borderRadius: 12, marginBottom: 15, borderWidth: 1, borderColor: '#FFCDD2' },
+  warningText: { color: '#D32F2F', fontWeight: 'bold', marginLeft: 10 },
 
-  summaryCard: {
-    backgroundColor: Colors.light.card, borderRadius: 20, padding: 20, marginBottom: 20,
-    elevation: 4, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10
-  },
-  calorieRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  calLabel: { fontSize: 14, color: '#888' },
-  calValue: { fontSize: 18, fontWeight: 'bold', color: Colors.light.text },
-  ring: {
-    width: 100, height: 100, borderRadius: 50, borderWidth: 8, borderColor: '#eee', // Đổi màu viền nền
-    justifyContent: 'center', alignItems: 'center',
-    backgroundColor: '#fff'
-  },
-  ringText: { fontSize: 20, fontWeight: 'bold', color: Colors.light.tint },
-  ringSub: { fontSize: 12, color: '#888' },
-  progressBarBg: { height: 10, backgroundColor: '#eee', borderRadius: 5, overflow: 'hidden' },
-  progressBarFill: { height: '100%', backgroundColor: Colors.light.tint },
-
-  macroRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 25 },
-  macroCard: {
-    width: '30%', backgroundColor: '#fff', padding: 10, borderRadius: 10,
-    borderLeftWidth: 4, elevation: 2
-  },
-  macroLabel: { fontSize: 12, color: '#666' },
-  macroValue: { fontSize: 16, fontWeight: 'bold', marginTop: 4 },
-
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: Colors.light.text },
-  seeAll: { color: Colors.light.tint },
+  summaryCard: { backgroundColor: '#fff', borderRadius: 20, padding: 20, marginBottom: 25, elevation: 3, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10 },
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  label: { fontSize: 14, color: '#888' },
+  bigNumber: { fontSize: 32, fontWeight: '800', color: '#1A1A1A', marginVertical: 5 },
+  unit: { fontSize: 16, fontWeight: '500', color: '#888' },
+  subLabel: { fontSize: 14, color: '#555', fontWeight: '500' },
   
-  suggestionCard: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 15,
-    borderRadius: 12, elevation: 1
-  },
-  suggestionContent: { flex: 1, marginLeft: 15 },
-  suggestionTitle: { fontWeight: 'bold', fontSize: 16, color: '#333' },
-  suggestionSub: { color: '#666', fontSize: 13, marginTop: 4 },
+  miniProgressBg: { height: 6, backgroundColor: '#F0F0F0', borderRadius: 3, width: 100, marginTop: 10 },
+  miniProgressFill: { height: '100%', borderRadius: 3 },
+  
+  chartNote: { textAlign: 'center', fontSize: 10, color: '#aaa', marginTop: -10, marginLeft: 20 },
+  macroLegend: { flexDirection: 'row', marginTop: 15, paddingTop: 15, borderTopWidth: 1, borderTopColor: '#f5f5f5' },
 
-  // Style cho nút Chatbot (Floating Action Button)
-  fab: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: Colors.light.tint,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  }
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A1A', marginBottom: 12 },
+  
+  suggestionCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 16, borderRadius: 16, elevation: 2, shadowColor: '#000', shadowOpacity: 0.03 },
+  iconBox: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+  suggestionContent: { flex: 1 },
+  suggestionTitle: { fontWeight: '700', fontSize: 16, color: '#333', marginBottom: 2 },
+  suggestionSub: { color: '#666', fontSize: 13 },
+
+  fab: { position: 'absolute', bottom: 25, right: 20, width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.light.tint, justifyContent: 'center', alignItems: 'center', elevation: 8, shadowColor: Colors.light.tint, shadowOpacity: 0.4, shadowOffset: {width: 0, height: 4} },
 });

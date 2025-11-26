@@ -1,7 +1,7 @@
+import { useUserStore } from '@/src/store/userStore';
 import { router } from 'expo-router';
 import React from "react";
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-
 // định nghĩa style
 const styles = StyleSheet.create({
   container: {
@@ -45,13 +45,13 @@ const styles = StyleSheet.create({
 });
 
 
-
 export default function LoginScreen(){
   const [email,setEmail]=React.useState('');
   const [password,setPassword]=React.useState('');
 
-  const handleLogin=()=>{
-    const emailRegex=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const handleLogin = () => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
     if(!email || !password){
       Alert.alert('Vui lòng nhập đầy đủ thông tin');
       return;
@@ -60,20 +60,25 @@ export default function LoginScreen(){
       Alert.alert('Email không hợp lệ');
       return;
     }
+
     if (email === 'admin@gmail.com' && password === '123456') {
-      Alert.alert('Chào Admin', 'Đang chuyển đến trang quản trị...');
-      router.replace('/admin/dashboard' as any); // Chuyển sang Dashboard Admin
-    } else if (emailRegex.test(email)) { // User thường
-      Alert.alert('Thành công', 'Đăng nhập thành công!');
-      router.replace('/'); 
+        // Đăng nhập Admin
+        useUserStore.getState().setLogin(true, 'admin_token'); 
+        Alert.alert('Chào Admin', 'Đang chuyển đến trang quản trị...');
+        router.replace('/admin/dashboard' as any);
+    } else if (emailRegex.test(email)) { // User thường (Logic giả định: email hợp lệ là đăng nhập được)
+        // Đăng nhập User
+        useUserStore.getState().setLogin(true, 'user_token');
+        Alert.alert('Thành công', 'Đăng nhập thành công!');
+        router.replace('/'); 
     } else {
-      Alert.alert('Lỗi', 'Thông tin đăng nhập không đúng');
-    
+        Alert.alert('Lỗi', 'Thông tin đăng nhập không đúng');
     }
   };
 
   return (
     <View style={styles.container}>
+      {/* ... (UI giữ nguyên) */}
       <Text style={styles.title}>Đăng Nhập</Text>
 
       <TextInput

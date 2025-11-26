@@ -1,81 +1,70 @@
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Href, Stack, useRouter, useSegments } from 'expo-router';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { StatusBar } from 'expo-status-bar';
 import * as React from 'react';
-import { ActivityIndicator, Alert, View } from 'react-native';
-import { useColorScheme } from '../hooks/use-color-scheme';
+import { ActivityIndicator, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-
-export default function Layout_Main() {
+export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [loading, setLoading] = React.useState(true);
-  const [isLoggedIn, setIsLoggedIn] = React.useState<boolean | null>(null);
+  const router = useRouter();
+  const segments = useSegments();
 
   React.useEffect(() => {
     ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
-
     const checkLogin = async () => {
       try {
         const loggedIn = await AsyncStorage.getItem('isLoggedIn');
-        setIsLoggedIn(loggedIn === 'true');
+        if (loggedIn === 'true') {
+          // The segments.length type does not include 0, so check only the first segment for 'login'.
+          if (segments[0] === 'login') {
+             router.replace('/' as Href); 
+          }
+        }
       } catch (error) {
         console.error('CheckLogin error:', error);
-        Alert.alert('Error', String(error));
-        setIsLoggedIn(false);
       } finally {
         setLoading(false);
       }
     };
-
     checkLogin();
-  }, []);
+  }, []); 
 
-  React.useEffect(() => {
-    // global JS error handler để hiện lỗi lên thiết bị + console
-    // @ts-ignore
-    const defaultHandler = (global as any).ErrorUtils?.getGlobalHandler?.() ?? (global as any).ErrorUtils?.getGlobalHandler;
-    // @ts-ignore
-    (global as any).ErrorUtils?.setGlobalHandler?.((error: any, isFatal: boolean) => {
-      try {
-        console.log('Global JS error:', error, 'isFatal:', isFatal);
-        // show alert on device so you see it directly
-        Alert.alert('Unexpected error', `${isFatal ? 'Fatal: ' : ''}${error?.message || String(error)}`);
-      } catch (e) {
-        // ignore alert errors
-      } finally {
-        if (typeof defaultHandler === 'function') {
-          defaultHandler(error, isFatal);
-        }
-      }
-    });
-  }, []);
-
-  if (loading || isLoggedIn === null) {
+  if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#1abc9c" />
+        <ActivityIndicator size="large" color="#C1121F" />
       </View>
     );
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        {isLoggedIn ? (
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        ) : (
-          <>
-            <Stack.Screen name="login" options={{ headerShown: false }} />
-            <Stack.Screen name="register" options={{ headerShown: false }} />
-            <Stack.Screen name="camera" />
-            <Stack.Screen name="details" />
-          </>
-        )}
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <Stack screenOptions={{ headerShown: false }}>
+          {/* AUTH */}
+          <Stack.Screen name="login" />
+          <Stack.Screen name="register" />
+          <Stack.Screen name="forgot-password" />
+
+          {/* APP MAIN (Chứa cả Reports, Settings, History bên trong) */}
+          <Stack.Screen name="(drawer)" /> 
+
+          {/* ADMIN */}
+          <Stack.Screen name="admin/dashboard" />
+
+          {/* FEATURES (Các màn hình Fullscreen) */}
+          <Stack.Screen name="camera" />
+          <Stack.Screen name="results" />
+          <Stack.Screen name="chatbot" />
+          
+        </Stack>
+        <StatusBar style="dark" />
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
-
