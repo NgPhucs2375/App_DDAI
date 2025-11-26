@@ -1,40 +1,59 @@
 import React from 'react';
-import { View, StyleSheet, SafeAreaView, Button } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import AppHeader from '../../../components/AppHeader';
-import { Colors } from '../../../constants/theme';
+import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text } from 'react-native';
+import { useRouter } from 'expo-router';
 
-// Màu sắc dựa trên hình ảnh
+// Nếu bạn sử dụng Expo Router, bạn cần thêm dòng này:
+// import { useRouter } from 'expo-router'; 
+
+// Màu sắc
 const PRIMARY_BLUE = '#007AFF'; // Xanh dương cơ bản
 const BACKGROUND_GREY = '#D8D8D8'; // Xám nền
 
 export default function BasicLayout() {
+    const router = useRouter(); 
+
+  const handleCameraPress = () => {
+    router.push('/(drawer)/(tabs)/ChoAITraKetqua'); // Logic chuyển trang thực tế
+    console.log('--- Đã nhấn: Chuyển đến màn hình Chờ Kết quả (/image-detail) ---');
+  };
+  const handleCameraPress1 = () => {
+    router.push('/(drawer)/(tabs)/ThemMonAnThuCong'); // Logic chuyển trang thực tế
+    console.log('--- Đã nhấn: Chuyển đến màn hình Chờ Kết quả (/image-detail) ---');
+  };
+
   return (
-    // 1. SafeAreaView: Đảm bảo nội dung không bị che bởi notch/thanh trạng thái.
     <SafeAreaView style={styles.safeArea}>
-      {/* 2. Main Container: View bao ngoài cùng, chiếm toàn bộ không gian. */}
       <View style={styles.container}>
 
-        {/* 3. UPPER SECTION (Phần trên): Chứa Header và Main Content */}
+        {/* UPPER SECTION */}
         <View style={styles.upperSection}>
 
-          {/* 3.1. Header / Navbar (Thanh trên cùng) */}
+          {/* Header / Navbar */}
           <View style={styles.header}>
             <View style={styles.headerSquare} />
             <View style={styles.headerInput} />
           </View>
 
-          {/* 3.2. Main Content Box (Hộp nội dung chính màu xanh) */}
+          {/* Main Content Box (Hộp nội dung chính màu xanh) */}
           <View style={styles.mainContentBox}>
-            {/* Vị trí của hình oval lớn */}
             <View style={styles.ovalShape} />
+            <Text style={{color: 'white', fontSize: 18, position: 'absolute'}}>CAMERA SCREEN</Text>
           </View>
         </View>
 
-        {/* 4. BOTTOM BAR / FOOTER (Thanh dưới cùng) */}
+        {/* BOTTOM BAR / FOOTER (Đã sửa lại theo hình ảnh đầu tiên) */}
         <View style={styles.bottomBar}>
-          <View style={styles.bottomSquare} />
-          <View style={styles.bottomCircle} />
+          {/* Nút vuông nhỏ */}
+          <TouchableOpacity 
+            onPress={handleCameraPress1} 
+            style={styles.bottomSquare} 
+          />
+          
+          {/* Nút tròn lớn (Camera chính) - Liên kết */}
+          <TouchableOpacity 
+            onPress={handleCameraPress} 
+            style={styles.bottomCircle} 
+          />
         </View>
 
       </View>
@@ -43,55 +62,25 @@ export default function BasicLayout() {
 }
 
 const styles = StyleSheet.create({
-  // Style cho SafeAreaView
-  safeArea: {
-    flex: 1, // Chiếm toàn bộ màn hình
-    backgroundColor: BACKGROUND_GREY, // Đặt màu nền xám
-  },
-  
-  // Style cho Container chính
-  container: {
-    flex: 1, // Chiếm toàn bộ không gian còn lại
-    padding: 10, // Tạo khoảng đệm nhỏ xung quanh như trong hình
-  },
+  // === Layout Cơ bản ===
+  safeArea: { flex: 1, backgroundColor: BACKGROUND_GREY },
+  container: { flex: 1, padding: 10 },
+  upperSection: { flex: 1, marginBottom: 10 },
 
-  // ----------------------------------------------------
-  // 3. UPPER SECTION & MAIN CONTENT STYLES
-  // ----------------------------------------------------
-  upperSection: {
-    flex: 1, // Cho phép phần này co giãn (chiếm hầu hết màn hình)
-    marginBottom: 10, // Khoảng cách với thanh dưới
-  },
+  // === Header ===
+  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  headerSquare: { width: 30, height: 30, backgroundColor: PRIMARY_BLUE, borderRadius: 5, marginRight: 10 },
+  headerInput: { flex: 1, height: 30, backgroundColor: PRIMARY_BLUE, borderRadius: 15 },
 
-  // 3.1. Header Styles
-  header: {
-    flexDirection: 'row', // Sắp xếp các item theo hàng ngang
-    alignItems: 'center', // Căn giữa theo chiều dọc
-    marginBottom: 10, // Khoảng cách với hộp nội dung chính
-  },
-  headerSquare: {
-    width: 30,
-    height: 30,
-    backgroundColor: PRIMARY_BLUE,
-    borderRadius: 5, // Góc bo tròn nhẹ
-    marginRight: 10,
-  },
-  headerInput: {
-    flex: 1, // Chiếm phần không gian còn lại
-    height: 30,
-    backgroundColor: PRIMARY_BLUE,
-    borderRadius: 15, // Góc bo tròn để trông giống thanh input
-  },
-
-  // 3.2. Main Content Box (Hộp xanh lớn)
+  // === Main Content Box (Hộp xanh lớn) ===
   mainContentBox: {
-    flex: 1, // Chiếm toàn bộ không gian còn lại trong upperSection
+    flex: 1,
     backgroundColor: PRIMARY_BLUE,
-    borderRadius: 20, // Bo góc lớn
-    justifyContent: 'center', // Căn giữa hình oval theo chiều dọc
-    alignItems: 'center', // Căn giữa hình oval theo chiều ngang
-    elevation: 5, // Thêm đổ bóng (Android)
-    shadowColor: '#000', // Đổ bóng (iOS)
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -99,24 +88,22 @@ const styles = StyleSheet.create({
   
   // Hình Oval
   ovalShape: {
-    width: '80%', // Chiếm 80% chiều rộng của hộp chứa
-    height: '90%', // Chiếm 90% chiều cao của hộp chứa
+    width: '80%',
+    height: '90%',
     backgroundColor: 'white',
-    borderRadius: 999, // Giá trị lớn để tạo thành hình tròn/oval
-    // Dùng transform để kéo dãn thành hình oval nếu cần, nhưng borderRadius cao
-    // sẽ tự tạo ra hình oval dựa trên kích thước width/height của nó.
+    borderRadius: 999,
   },
 
   // ----------------------------------------------------
-  // 4. BOTTOM BAR STYLES
+  // 4. BOTTOM BAR STYLES (Đã sửa lại theo hình ảnh đầu tiên)
   // ----------------------------------------------------
   bottomBar: {
-    height: 80, // Chiều cao cố định
+    height: 80, 
     backgroundColor: PRIMARY_BLUE,
-    borderRadius: 20, // Bo góc lớn
+    borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around', // Phân bố đều các item
+    justifyContent: 'space-around', // Giữ space-around để phân bố 2 nút
     paddingHorizontal: 20,
     elevation: 5,
     shadowColor: '#000',
@@ -124,16 +111,25 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
   },
+  
+  // Nút vuông nhỏ ở thanh dưới cùng
   bottomSquare: {
     width: 30,
     height: 30,
     backgroundColor: 'white',
     borderRadius: 5,
+    // opacity: 0.5, // Có thể thêm nếu muốn nó ít nổi bật hơn
   },
+  
+  // Nút tròn lớn (Camera chính)
   bottomCircle: {
     width: 40,
     height: 40,
     backgroundColor: 'white',
     borderRadius: 20, // 1 nửa chiều rộng/cao để tạo hình tròn
+    // shadowColor: 'white', // Có thể thêm nếu muốn hiệu ứng nổi bật
+    // shadowOffset: { width: 0, height: 0 },
+    // shadowOpacity: 0.5,
+    // shadowRadius: 5,
   },
 });

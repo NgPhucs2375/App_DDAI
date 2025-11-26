@@ -37,22 +37,21 @@ export default function Layout_Tabs() {
         name="details"
         options={{
           title: "Thông tin chi tiết",
-          // Không muốn hiện trong tab bar
-          href: null,
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name="document-text" size={size} color={color} />
           ),
         }} />
-
+        
         <Tabs.Screen
-        name="camera"
-        options={{
-          // TÊN GỢI Ý: Nên đổi thành "Cá nhân" hoặc "Tài khoản"
-          title: "Camera chụp ảnh", 
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <Ionicons name="person" size={size} color={color} />
+          name="Camera"
+          options={{
+            title: "Camera", 
+            tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+              // THAY ĐỔI TÊN ICON TỪ 'person' SANG 'camera'
+              <Ionicons name="camera" size={size} color={color} /> 
           ),
-        }} />
+        }} 
+        />
 
       <Tabs.Screen
         name="explore"
@@ -63,7 +62,7 @@ export default function Layout_Tabs() {
           ),
         }} /> 
 
-      {/* <Tabs.Screen
+      <Tabs.Screen
         name="profile"
         options={{
           // TÊN GỢI Ý: Nên đổi thành "Cá nhân" hoặc "Tài khoản"
@@ -71,9 +70,9 @@ export default function Layout_Tabs() {
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name="person" size={size} color={color} />
           ),
-        }} /> */}
+        }} />
 
-      {/* <Tabs.Screen
+      <Tabs.Screen
         name="food_recognition"
         options={{
           title: "Nhận diện", // Gợi ý: Rút gọn cho tab bar
@@ -81,30 +80,22 @@ export default function Layout_Tabs() {
             <Ionicons name="fast-food" size={size} color={color} />
           ),
         }}
-<<<<<<< HEAD
-      /> */}
-      
-=======
       />
 
-      {/** Ẩn các màn hình phụ khỏi thanh tab, vẫn có thể navigate tới */}
       <Tabs.Screen
-        name="FoodRecognitionScreen"
-        options={{ href: null }}
+        name="ChoAITraKetqua"
+        options={{href: null}}
       />
       <Tabs.Screen
-        name="MealLog"
-        options={{ href: null }}
+        name="KetQuaAI"
+        options={{href: null}}
       />
       <Tabs.Screen
-        name="MealHistory"
-        options={{ href: null }}
+        name="ThemMonAnThuCong"
+        options={{href: null}}
       />
-      <Tabs.Screen
-        name="Recipes"
-        options={{ href: null }}
-      />
->>>>>>> df628b3833707fd43700f08e17ee4cb436d638f2
+     
+      
     </Tabs>
   );
 }
