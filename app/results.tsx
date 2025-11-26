@@ -2,25 +2,26 @@ import { Colors } from '@/constants/theme';
 import { addMeal } from '@/src/data/mealStore';
 import { loadProfile } from '@/src/data/profileStore';
 import { Ionicons } from '@expo/vector-icons';
-import Constants from 'expo-constants';
 import * as FileSystem from 'expo-file-system/legacy';
-import * as Haptics from 'expo-haptics'; // Import Rung
+import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 
-// ⚠️ KEY CỦA BẠN (Giữ nguyên key cũ của bạn)
-const CLARIFAI_API_KEY = (Constants.expoConfig?.extra as any)?.CLARIFAI_API_KEY || '';
+// ⚠️ KEY CỦA BẠN (Đã điền sẵn)
+const CLARIFAI_API_KEY = '0079cada55b247248b6e823938603b2e';
 const CALORIE_NINJAS_KEY = 'sMLT540LFc9N0TN3FAQZHg==tEYWQLdKLn9z0kr4'; 
 
 interface NutritionInfo {
@@ -33,6 +34,10 @@ interface NutritionInfo {
 export default function AnalysisResultScreen() {
   const router = useRouter();
   const { imageUri } = useLocalSearchParams<{ imageUri: string }>();
+
+  // State cho Modal sửa tên
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState('');
 
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState('');
@@ -67,11 +72,10 @@ export default function AnalysisResultScreen() {
       setStep('Đang tra cứu dinh dưỡng...');
       await fetchRealNutrition(clarifaiName);
       
-      // Rung báo thành công khi xong hết
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); 
 
     } catch (error: any) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); // Rung báo lỗi
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Lỗi', error.message);
       setFoodName('Không xác định');
     } finally {
@@ -82,8 +86,11 @@ export default function AnalysisResultScreen() {
   const fetchClarifaiName = async (base64: string) => {
     const USER_ID = 'clarifai';
     const APP_ID = 'main';
-    const MODEL_ID = 'food-item-recognition';
+    const MODEL_ID = 'bd367be194cf45149e75f01d59f77ba7'; // Food Model v1.0
+    
     const url = `https://api.clarifai.com/v2/users/${USER_ID}/apps/${APP_ID}/models/${MODEL_ID}/outputs`;
+
+    console.log("🤖 Đang gửi ảnh lên Clarifai...");
 
     const response = await fetch(url, {
       method: 'POST',
@@ -95,8 +102,20 @@ export default function AnalysisResultScreen() {
     });
 
     const data = await response.json();
-    if (data.status?.code !== 10000) throw new Error('Không nhận diện được ảnh.');
-    return data.outputs[0].data.concepts[0].name;
+
+    if (data.status?.code !== 10000) {
+        console.error("Lỗi Clarifai:", data.status);
+        throw new Error('Không nhận diện được ảnh (Lỗi API).');
+    }
+    
+    const concepts = data.outputs[0].data.concepts;
+    console.log("🔍 Kết quả AI nhìn thấy:", concepts.map((c: any) => `${c.name} (${Math.round(c.value * 100)}%)`));
+
+    if (concepts && concepts.length > 0) {
+        return concepts[0].name; 
+    } else {
+        throw new Error('AI không nhìn ra món gì cả.');
+    }
   };
 
   const fetchRealNutrition = async (query: string) => {
@@ -106,9 +125,9 @@ export default function AnalysisResultScreen() {
       headers: { 'X-Api-Key': CALORIE_NINJAS_KEY }
     });
     
-if (!response.ok) {
+    if (!response.ok) {
         const text = await response.text();
-        console.error("LỖI API CALORIE:", text); // Xem log này nó báo gì?
+        console.error("LỖI API CALORIE:", text);
         throw new Error(`API Error: ${response.status}`);
     }
 
@@ -136,7 +155,7 @@ if (!response.ok) {
   };
 
   const handleSave = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); // Rung khi ấn lưu
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
     const calValue = nutritionData.find(n => n.label === 'Calories')?.value.replace(' kcal', '');
     const newMeal = {
@@ -148,7 +167,7 @@ if (!response.ok) {
     };
     await addMeal(newMeal);
     Alert.alert('Thành công', 'Đã thêm vào nhật ký!');
-    router.replace('/(drawer)/(tabs)/MealHistory'); // Quay về lịch sử
+    router.replace('/(drawer)/(tabs)/MealHistory');
   };
 
   return (
@@ -172,11 +191,22 @@ if (!response.ok) {
            )}
         </View>
 
+        {/* KẾT QUẢ (Cho phép bấm vào để sửa) */}
         <View style={styles.resultCard}>
-            <Text style={styles.foodName}>{foodName || '---'}</Text>
+            <TouchableOpacity onPress={() => {
+                setEditedName(foodName);
+                setIsEditingName(true);
+            }}>
+                <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                    <Text style={styles.foodName}>{foodName || '---'}</Text>
+                    <Ionicons name="pencil" size={18} color={Colors.light.tint} style={{marginLeft: 8}} />
+                </View>
+            </TouchableOpacity>
+
             {warning && <View style={styles.warningBox}><Text style={styles.warningText}>{warning}</Text></View>}
+
             <Text style={styles.apiCredit}>
-               {loading ? '' : 'Verified by CalorieNinjas API ✅'}
+               {loading ? '' : 'Chạm vào tên món để sửa nếu sai ✏️'}
             </Text>
         </View>
 
@@ -201,7 +231,48 @@ if (!response.ok) {
                 <Text style={styles.saveBtnText}>+ Lưu vào Nhật ký</Text>
             </TouchableOpacity>
         )}
+        
       </ScrollView>
+
+      {/* MODAL SỬA TÊN MÓN */}
+      <Modal visible={isEditingName} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                  <Text style={styles.modalTitle}>Sửa tên món ăn</Text>
+                  <Text style={{color: '#666', marginBottom: 10}}>Nhập tên tiếng Anh để tìm chuẩn nhất (vd: banana, pho, rice)</Text>
+
+                  <TextInput 
+                      style={styles.input} 
+                      value={editedName} 
+                      onChangeText={setEditedName}
+                      autoFocus
+                  />
+
+                  <View style={styles.modalButtons}>
+                      <TouchableOpacity style={[styles.btn, styles.btnCancel]} onPress={() => setIsEditingName(false)}>
+                          <Text style={styles.btnText}>Huỷ</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                          style={[styles.btn, styles.btnSave]} 
+                          onPress={() => {
+                              setIsEditingName(false);
+                              setFoodName(editedName);
+                              setStep('Đang tính lại dinh dưỡng...');
+                              setLoading(true);
+                              fetchRealNutrition(editedName)
+                                  .then(() => setLoading(false))
+                                  .catch(() => {
+                                      Alert.alert('Lỗi', 'Không tìm thấy thông tin dinh dưỡng cho món này');
+                                      setLoading(false);
+                                  });
+                          }}
+                      >
+                          <Text style={[styles.btnText, {color: '#fff'}]}>Cập nhật</Text>
+                      </TouchableOpacity>
+                  </View>
+              </View>
+          </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -234,4 +305,15 @@ const styles = StyleSheet.create({
   
   saveBtn: { backgroundColor: Colors.light.tint, padding: 16, borderRadius: 14, alignItems: 'center', marginBottom: 40, shadowColor: Colors.light.tint, shadowOpacity: 0.3, shadowOffset: {width: 0, height: 4}, elevation: 5 },
   saveBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 },
+
+  // --- CÁC STYLES BỔ SUNG CHO MODAL ---
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
+  modalContent: { backgroundColor: '#fff', borderRadius: 16, padding: 20, elevation: 5 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 10, textAlign: 'center', color: '#333' },
+  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 12, marginBottom: 20, fontSize: 16, backgroundColor: '#fafafa' },
+  modalButtons: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
+  btn: { flex: 1, padding: 12, borderRadius: 8, alignItems: 'center' },
+  btnCancel: { backgroundColor: '#eee' },
+  btnSave: { backgroundColor: Colors.light.tint },
+  btnText: { fontWeight: '600', fontSize: 16 },
 });
