@@ -1,5 +1,5 @@
 {
-  "extends": "./node_modules/expo/tsconfig.base",
+  "extends": "expo/tsconfig.base", 
   "compilerOptions": {
     "jsx": "react-native",
     "target": "ESNext",
@@ -21,6 +21,5 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
-  ],
-  "extends": "expo/tsconfig.base"
+  ]
 }

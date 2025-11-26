@@ -1,79 +1,57 @@
+import { Colors } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { DrawerActions } from '@react-navigation/native';
-import { Image } from 'expo-image';
+import { DrawerActions } from '@react-navigation/native'; // Import DrawerActions
 import { useNavigation } from 'expo-router';
 import React from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
-import { Colors } from '../constants/theme';
+import { Platform, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-type AppHeaderProps = {
-  rightIconName?: React.ComponentProps<typeof Ionicons>['name'];
-  onRightPress?: () => void;
-};
-
-export function AppHeader({ rightIconName = 'notifications-outline', onRightPress }: AppHeaderProps) {
+export default function AppHeader() {
   const navigation = useNavigation();
-  const openDrawer = () => navigation.dispatch(DrawerActions.openDrawer());
+
+  const openDrawer = () => {
+    // Gửi hành động mở Drawer an toàn
+    navigation.dispatch(DrawerActions.openDrawer());
+  };
 
   return (
-    <View style={styles.header}>
-      <TouchableOpacity onPress={openDrawer} accessibilityRole="button" accessibilityLabel="Open drawer">
-        <Image source={{ uri: 'https://i.pravatar.cc/100' }} style={styles.avatar} />
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      
+      {/* Nút Menu bên trái để mở Drawer */}
+      <TouchableOpacity onPress={openDrawer} style={styles.menuButton}>
+        <Ionicons name="menu" size={28} color="#FFF" />
       </TouchableOpacity>
 
-      <View style={styles.searchContainer}>
-        <TextInput
-          placeholder="Tìm kiếm..."
-          placeholderTextColor="#555"
-          style={styles.searchInput}
-        />
-      </View>
-
-      <TouchableOpacity onPress={onRightPress} accessibilityRole="button">
-        <Ionicons name={rightIconName} size={26} color={Colors.light.icon} />
-      </TouchableOpacity>
+      <Text style={styles.title}>NutriScan AI 🥗</Text>
+      
+      {/* View rỗng bên phải để cân bằng title ở giữa */}
+      <View style={{ width: 28 }} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    backgroundColor: Colors.light.headerBackground,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  container: {
+    // Sử dụng màu headerBackground (#003049) từ file theme
+    backgroundColor: Colors.light.headerBackground || '#003049', 
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 10 : 50,
+    paddingBottom: 15,
     paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    flexDirection: 'row', // Xếp ngang
+    alignItems: 'center',
+    justifyContent: 'space-between', // Căn đều 2 bên
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 5,
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderColor: Colors.light.icon,
-    borderWidth: 2,
+  menuButton: {
+    padding: 5,
   },
-  searchContainer: {
-    flex: 1,
-    marginHorizontal: 10,
-    backgroundColor: Colors.light.card,
-    borderRadius: 20,
-    height: 38,
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-  },
-  searchInput: {
-    fontSize: 16,
-    color: Colors.light.text,
+  title: {
+    color: '#FFFFFF', // Chữ trắng
+    fontSize: 20,
+    fontWeight: 'bold',
   },
 });
-
-export default AppHeader;

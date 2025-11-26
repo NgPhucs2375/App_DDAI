@@ -1,100 +1,119 @@
+import { Colors } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
+import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function Layout_Tabs() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tabs
       screenOptions={{
-        headerShown: false, // Tốt! Giữ nguyên vì bạn có header tùy chỉnh riêng
-        
-        // Các dòng này không còn tác dụng vì header đã bị ẩn
-        // headerStyle:{backgroundColor:'#1abc9c'},
-        // headerTintColor:'white',
-
-        // ===== ĐIỀU CHỈNH MÀU SẮC TAB BAR =====
+        headerShown: false,
+        tabBarActiveTintColor: Colors.light.tint,
+        tabBarInactiveTintColor: Colors.light.icon,
         tabBarStyle: {
-          backgroundColor: '#FFFFFF', // 1. Nền trắng sạch sẽ, hiện đại
-          borderTopColor: '#E0E0E0', // Thêm 1 đường viền mỏng cho đẹp
+          backgroundColor: '#ffffff',
           borderTopWidth: 1,
+          borderTopColor: '#efefef',
+          height: 60 + insets.bottom, 
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 10, 
+          paddingTop: 10,
+          elevation: 5,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
         },
-        tabBarActiveTintColor: '#C1121F',   // 2. Màu nhấn (Crimson Blaze) khi tab được chọn
-        tabBarInactiveTintColor: '#669BBC', // 3. Màu phụ (Blue Marble) khi tab không được chọn
-        // =====================================
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '500',
+          marginBottom: 0,
+        }
       }}
     >
+      {/* 1. Trang chủ */}
       <Tabs.Screen
         name="index"
         options={{
           title: 'Trang chủ',
+          // ĐÃ SỬA: Thêm type cho color và size
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <Ionicons name="home" size={size} color={color} />
+            <Ionicons name="home-outline" size={24} color={color} />
           ),
         }}
       />
 
+      {/* 2. Nhật ký */}
       <Tabs.Screen
-        name="details"
+        name="MealHistory"
         options={{
-          title: "Thông tin chi tiết",
+          title: 'Nhật ký',
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <Ionicons name="document-text" size={size} color={color} />
+            <Ionicons name="calendar-outline" size={24} color={color} />
           ),
-        }} />
-        
-        <Tabs.Screen
-          name="Camera"
-          options={{
-            title: "Camera", 
-            tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-              // THAY ĐỔI TÊN ICON TỪ 'person' SANG 'camera'
-              <Ionicons name="camera" size={size} color={color} /> 
-          ),
-        }} 
-        />
+        }}
+      />
 
+      {/* 3. Nút THÊM (Nổi lên) */}
+      <Tabs.Screen
+        name="(add)/index"
+        options={{
+          title: 'Thêm',
+          // Đối với nút giữa, ta không dùng color/size mặc định nên có thể để any hoặc khai báo đầy đủ
+          tabBarIcon: ({ focused }: { focused: boolean; color: string; size: number }) => (
+            <View
+              style={{
+                top: -20,
+                width: 60,
+                height: 60,
+                borderRadius: 30,
+                backgroundColor: Colors.light.tint,
+                justifyContent: 'center',
+                alignItems: 'center',
+                elevation: 5,
+                shadowColor: Colors.light.tint,
+                shadowOpacity: 0.3,
+                shadowOffset: { width: 0, height: 4 },
+                borderWidth: 4,
+                borderColor: '#f5f5f5'
+              }}
+            >
+              <Ionicons name="add" size={32} color="#fff" />
+            </View>
+          ),
+          tabBarLabel: () => null,
+        }}
+      />
+
+      {/* 4. Khám phá */}
       <Tabs.Screen
         name="explore"
         options={{
-          title: "Khám phá",
+          title: 'Khám phá',
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <Ionicons name="compass" size={size} color={color} />
-          ),
-        }} /> 
-
-      <Tabs.Screen
-        name="profile"
-        options={{
-          // TÊN GỢI Ý: Nên đổi thành "Cá nhân" hoặc "Tài khoản"
-          title: "Cá nhân", 
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <Ionicons name="person" size={size} color={color} />
-          ),
-        }} />
-
-      <Tabs.Screen
-        name="food_recognition"
-        options={{
-          title: "Nhận diện", // Gợi ý: Rút gọn cho tab bar
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <Ionicons name="fast-food" size={size} color={color} />
+            <Ionicons name="compass-outline" size={24} color={color} />
           ),
         }}
       />
 
+      {/* 5. Hồ sơ */}
       <Tabs.Screen
-        name="ChoAITraKetqua"
-        options={{href: null}}
+        name="profile"
+        options={{
+          title: 'Hồ sơ',
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+            <Ionicons name="person-outline" size={24} color={color} />
+          ),
+        }}
       />
-      <Tabs.Screen
-        name="KetQuaAI"
-        options={{href: null}}
-      />
-      <Tabs.Screen
-        name="ThemMonAnThuCong"
-        options={{href: null}}
-      />
-     
+
+      {/* --- CÁC MÀN HÌNH ẨN --- */}
+      <Tabs.Screen name="details" options={{ href: null }} />
+      <Tabs.Screen name="MealLog" options={{ href: null }} />
+      <Tabs.Screen name="Recipes" options={{ href: null }} />
       
     </Tabs>
   );

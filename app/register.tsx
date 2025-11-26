@@ -1,7 +1,7 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useUserStore } from '@/src/store/userStore';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -19,10 +19,21 @@ export default function RegisterScreen() {
     }
     setLoading(true);
     try {
-      // Lưu trạng thái đăng nhập đơn giản
-      await AsyncStorage.setItem('isLoggedIn', 'true');
-      // (Tuỳ app bạn có thể lưu token / user ở đây)
-  router.replace('/'); // chuyển sang root layout chứa drawer + tabs
+      // Tạo ID và Profile mặc định
+      const defaultProfile = {
+        id: Date.now().toString(),
+        fullName: name || 'User ' + Date.now().toString().slice(-4),
+        goals: { dailyCalories: 2000 },
+        createdAt: new Date().toISOString(),
+        // Các trường khác sẽ dùng mặc định của Store (đã định nghĩa trong userStore.ts)
+      };
+
+      // 1. Dùng Store để lưu trạng thái đăng nhập và Profile
+      useUserStore.getState().setProfile(defaultProfile);
+      useUserStore.getState().setLogin(true, 'mock_token_' + Date.now()); 
+      
+      Alert.alert('Thành công', 'Đăng ký hoàn tất, đang chuyển đến trang chủ');
+      router.replace('/'); // Chuyển sang root layout
     } catch (e) {
       console.error(e);
       setError('Đăng ký thất bại, thử lại');
@@ -33,6 +44,7 @@ export default function RegisterScreen() {
 
   return (
     <View style={styles.container}>
+      {/* ... (UI giữ nguyên) */}
       <Text style={styles.title}>Đăng ký</Text>
 
       <TextInput
@@ -72,6 +84,7 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
+  // ... (Styles giữ nguyên)
   container: {
     flex: 1,
     padding: 24,
