@@ -1,0 +1,16 @@
+== LENH THAN THANH DE CHAY SERVER ==
+uvicorn main:app --reload 
+OR 
+python -m uvicorn main:app --reload
+(-- RELOAD : GIUP SERVER TU KHOI DONG LAI MOI KHI BAN SUA CODE, RAT TIEN)
+
+
+thêm 
+/docs 
+vào đường dẫn server để vào Swagger UI để thao tác với các lệnh
+
+ipconfig # lệnh tìm địa chỉ IP của máy tính
+
+
+python -m uvicorn main:app --reload --host 0.0.0.0
+# lệnh cho phép mọi thiết bị trong cùng mạng Wifi truy câoj vào API của mình
