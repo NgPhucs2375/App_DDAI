@@ -1,54 +1,67 @@
-import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import AppHeader from '@/components/AppHeader';
+import { Colors } from '@/constants/theme';
+import { UserService } from '@/src/services/api';
+import { useUserStore } from '@/src/store/userStore';
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import AppHeader from '../../components/AppHeader';
-import { Colors } from '../../constants/theme';
-import { loadProfile, saveProfile } from '../../src/data/profileStore';
-import { UserProfile } from '../../src/types/profile';
 
 export default function AllergiesScreen() {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const router = useRouter();
+  const { profile, setProfile } = useUserStore();
+  
+  // State quản lý danh sách dị ứng
+  const [allergies, setAllergies] = useState<string[]>(profile.allergies || []);
   const [input, setInput] = useState('');
-
-  useEffect(() => {
-    loadProfile().then(p => setProfile(p || { id: 'local-user', allergies: [] }));
-  }, []);
 
   const addAllergy = () => {
     const v = input.trim();
     if (!v) return;
-    if (profile) {
-      const next = { ...profile, allergies: Array.from(new Set([...(profile.allergies || []), v])) };
-      setProfile(next);
-      setInput('');
+    if (!allergies.includes(v)) {
+        setAllergies([...allergies, v]);
     }
+    setInput('');
   };
 
-  const removeAllergy = (a: string) => {
-    if (profile) {
-      const next = { ...profile, allergies: (profile.allergies || []).filter(x => x !== a) };
-      setProfile(next);
-    }
+  const removeAllergy = (item: string) => {
+    setAllergies(allergies.filter(a => a !== item));
   };
 
-  const persist = async () => {
-    if (!profile) return;
-    await saveProfile(profile);
-    Alert.alert('Đã lưu dị ứng');
-    router.back();
+  const handleSave = async () => {
+    try {
+        // Chuyển mảng thành chuỗi để gửi lên Server (VD: "Tôm,Cua")
+        const allergyString = allergies.join(",");
+
+        await UserService.updateProfile(Number(profile.id), {
+            allergies: allergyString,
+            // Cần gửi kèm các thông số khác để không bị lỗi thiếu field (tùy backend check)
+            height: profile.heightCm,
+            weight: profile.weightKg
+        });
+
+        // Cập nhật Store
+        setProfile({ ...profile, allergies: allergies });
+        
+        Alert.alert('Thành công', 'Đã lưu danh sách dị ứng!');
+        router.back();
+    } catch (e) {
+        Alert.alert("Lỗi", "Không lưu được.");
+    }
   };
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.light.background }}>
       <AppHeader />
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Dị ứng</Text>
+        <Text style={styles.title}>Quản lý Dị ứng ⚠️</Text>
+        <Text style={styles.sub}>Nhập các món bạn bị dị ứng để AI cảnh báo.</Text>
+
         <View style={styles.row}>
           <TextInput
-            style={[styles.input, { flex: 1 }]}
+            style={styles.input}
             value={input}
             onChangeText={setInput}
-            placeholder="Thêm dị ứng (vd: tôm, đậu phộng)"
+            placeholder="VD: Tôm, Đậu phộng..."
           />
           <TouchableOpacity style={styles.addBtn} onPress={addAllergy}>
             <Text style={styles.addText}>+ Thêm</Text>
@@ -56,15 +69,15 @@ export default function AllergiesScreen() {
         </View>
 
         <View style={styles.chipWrap}>
-          {(profile?.allergies || []).map(a => (
+          {allergies.map(a => (
             <TouchableOpacity key={a} style={styles.chip} onPress={() => removeAllergy(a)}>
               <Text style={styles.chipText}>{a}  ×</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        <TouchableOpacity style={styles.saveBtn} onPress={persist}>
-          <Text style={styles.saveText}>Lưu</Text>
+        <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
+          <Text style={styles.saveText}>Lưu thay đổi</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -72,24 +85,18 @@ export default function AllergiesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16 },
-  title: { fontSize: 20, fontWeight: '600', marginBottom: 16, color: Colors.light.text },
-  row: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  input: {
-    backgroundColor: Colors.light.card,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    color: Colors.light.text,
-  },
-  addBtn: { backgroundColor: Colors.light.tint, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12 },
-  addText: { color: '#fff', fontWeight: '600' },
-  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 16 },
-  chip: { backgroundColor: Colors.light.border, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16 },
-  chipText: { fontSize: 12, color: Colors.light.text },
-  saveBtn: { marginTop: 16, backgroundColor: Colors.light.tint, paddingVertical: 14, borderRadius: 30, alignItems: 'center' },
-  saveText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+  container: { padding: 20 },
+  title: { fontSize: 22, fontWeight: '700', color: Colors.light.text },
+  sub: { color: '#666', marginBottom: 20, marginTop: 5 },
+  row: { flexDirection: 'row', gap: 10, marginBottom: 20 },
+  input: { flex: 1, backgroundColor: '#fff', borderRadius: 10, borderWidth: 1, borderColor: '#eee', padding: 12, fontSize: 16 },
+  addBtn: { backgroundColor: Colors.light.tint, justifyContent: 'center', paddingHorizontal: 20, borderRadius: 10 },
+  addText: { color: '#fff', fontWeight: 'bold' },
+  
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  chip: { backgroundColor: '#FFEBEE', paddingVertical: 8, paddingHorizontal: 15, borderRadius: 20, borderWidth: 1, borderColor: '#FFCDD2' },
+  chipText: { color: '#D32F2F', fontWeight: '500' },
+  
+  saveBtn: { marginTop: 40, backgroundColor: Colors.light.tint, paddingVertical: 15, borderRadius: 30, alignItems: 'center', elevation: 2 },
+  saveText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
 });

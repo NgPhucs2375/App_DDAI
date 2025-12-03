@@ -1,3 +1,5 @@
+import { ReactNode } from "react";
+
 export type Gender = 'Nam' | 'Nữ' | 'Khác';
 
 export interface UserGoals {
@@ -10,6 +12,7 @@ export interface UserGoals {
 }
 
 export interface UserProfile {
+  email: ReactNode;
   id: string;
   fullName?: string;
   age?: number;

@@ -1,6 +1,7 @@
 import AppHeader from '@/components/AppHeader';
 import { Colors } from '@/constants/theme';
-import { useUserStore } from '@/src/store/userStore'; // 1. Import Store
+import { UserService } from '@/src/services/api'; // <--- Import UserService
+import { useUserStore } from '@/src/store/userStore';
 import { Gender } from '@/src/types/profile';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -9,22 +10,20 @@ import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View 
 export default function EditProfileScreen() {
   const router = useRouter();
   
-  // 2. Lấy profile và hàm setProfile từ Store
+  // Lấy profile và hàm setProfile từ Store
   const { profile, setProfile } = useUserStore();
 
-  // 3. Khởi tạo state form từ profile trong Store
+  // Khởi tạo state form từ profile trong Store
   const [fullName, setFullName] = useState(profile.fullName || '');
   const [age, setAge] = useState(profile.age?.toString() || '');
   const [height, setHeight] = useState(profile.heightCm?.toString() || '');
   const [weight, setWeight] = useState(profile.weightKg?.toString() || '');
   const [gender, setGender] = useState<Gender>(profile.gender || 'Khác');
 
-  // (Không cần useEffect loadProfile nữa vì Store đã có sẵn dữ liệu)
-
-  const handleSave = () => {
-    const ageNum = age ? Number(age) : undefined;
-    const heightNum = height ? Number(height) : undefined;
-    const weightNum = weight ? Number(weight) : undefined;
+  const handleSave = async () => {
+    const ageNum = age ? Number(age) : 0;
+    const heightNum = height ? Number(height) : 0;
+    const weightNum = weight ? Number(weight) : 0;
 
     // Validate
     if (heightNum && (heightNum < 50 || heightNum > 250)) {
@@ -37,20 +36,46 @@ export default function EditProfileScreen() {
     }
     if (!ageNum || !heightNum || !weightNum) {
         Alert.alert('Lưu ý', 'Vui lòng nhập đủ Tuổi, Chiều cao, Cân nặng để tính Calo chuẩn xác!');
-        // Vẫn cho lưu nhưng cảnh báo nhẹ
+        return;
     }
 
-    // 4. Lưu vào Store (Store sẽ tự động tính lại TDEE và lưu xuống máy)
-    setProfile({
-      fullName,
-      age: ageNum,
-      heightCm: heightNum,
-      weightKg: weightNum,
-      gender,
-    });
+    try {
+        // --- GỌI API CẬP NHẬT LÊN SERVER ---
+        // Backend cần đủ các trường để tính TDEE. 
+        // Vì UI chưa có nhập "Mức độ vận động" và "Cân nặng mục tiêu", ta lấy mặc định hoặc từ profile cũ.
+        const res = await UserService.updateProfile(Number(profile.id), {
+            height: heightNum,
+            weight: weightNum,
+            age: ageNum,
+            gender: gender,
+            target_weight: profile.goals?.targetWeightKg || weightNum, // Mặc định giữ nguyên nếu không có
+            activity_level: 'Vừa' // Mặc định là Vừa
+        });
 
-    Alert.alert('Thành công', 'Hồ sơ đã được cập nhật.\nMục tiêu Calo đã được tính toán lại!');
-    router.back();
+        if (res && res.new_target_calories) {
+            // Cập nhật lại Store Local với dữ liệu mới và Calo mới từ Server trả về
+            setProfile({
+                ...profile,
+                fullName,
+                age: ageNum,
+                heightCm: heightNum,
+                weightKg: weightNum,
+                gender,
+                goals: { 
+                    ...profile.goals,
+                    dailyCalories: res.new_target_calories // <--- Cập nhật Calo chuẩn từ Server
+                }
+            });
+
+            Alert.alert('Thành công', `Đã cập nhật!\nMục tiêu Calo mới của bạn: ${res.new_target_calories} kcal`);
+            router.back();
+        } else {
+            Alert.alert('Lỗi', 'Không cập nhật được hồ sơ trên Server.');
+        }
+    } catch (error) {
+        console.error(error);
+        Alert.alert('Lỗi', 'Không kết nối được Server.');
+    }
   };
 
   return (
@@ -96,7 +121,7 @@ export default function EditProfileScreen() {
         </View>
 
         <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-          <Text style={styles.saveText}>Lưu & Tính Calo</Text>
+          <Text style={styles.saveText}>Lưu & Tính Calo (Server)</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

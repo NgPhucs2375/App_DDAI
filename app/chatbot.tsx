@@ -1,7 +1,7 @@
 import { Colors } from '@/constants/theme';
-import { loadProfile } from '@/src/data/profileStore';
+import { AIService } from '@/src/services/api'; // Dùng Service thay vì gọi trực tiếp
+import { useUserStore } from '@/src/store/userStore';
 import { Ionicons } from '@expo/vector-icons';
-import { GoogleGenerativeAI } from '@google/generative-ai'; // Import Gemini
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -18,8 +18,7 @@ import {
   View
 } from 'react-native';
 
-// ⚠️ THAY KEY CỦA BẠN VÀO ĐÂY
-const GEMINI_API_KEY = 'AIzaSyBcEENzqehBToUl2_odBv8-rJC5MewsSWQ'; 
+// ❌ KHÔNG CÒN API KEY Ở ĐÂY NỮA!
 
 interface Message {
   id: string;
@@ -33,20 +32,15 @@ export default function ChatbotScreen() {
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const flatListRef = useRef<FlatList>(null);
-
-  // Khởi tạo Gemini
-  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+  const { profile } = useUserStore(); // Lấy profile từ Store
 
   useEffect(() => {
     initChat();
   }, []);
 
-  const initChat = async () => {
-    const p = await loadProfile();
-    const userName = p?.fullName || 'bạn';
-    // Prompt ngữ cảnh ban đầu (System Instruction)
-    const intro = `Chào ${userName}! Tôi là AI Dinh Dưỡng. Dựa trên hồ sơ của bạn (Cao: ${p?.heightCm}cm, Nặng: ${p?.weightKg}kg), tôi có thể giúp tính TDEE, gợi ý thực đơn giảm cân/tăng cơ hoặc giải đáp thắc mắc về calo. Bạn cần giúp gì?`;
-    
+  const initChat = () => {
+    const userName = profile.fullName || 'bạn';
+    const intro = `Chào ${userName}! Mình là trợ lý dinh dưỡng ảo. Mình có thể giúp gì cho bạn?`;
     setMessages([{ id: '0', text: intro, sender: 'ai' }]);
   };
 
@@ -60,33 +54,27 @@ export default function ChatbotScreen() {
     Keyboard.dismiss();
 
     try {
-      // 1. Lấy Context Profile để AI thông minh hơn
-      const profile = await loadProfile();
+      // Tạo ngữ cảnh để gửi xuống Backend
       const context = `
-        Bạn là chuyên gia dinh dưỡng.
-        Thông tin người dùng:
-        - Tên: ${profile?.fullName}
-        - Cân nặng: ${profile?.weightKg}kg
-        - Chiều cao: ${profile?.heightCm}cm
-        - Mục tiêu: ${profile?.goals?.dailyCalories} kcal/ngày.
-        - Dị ứng: ${profile?.allergies?.join(', ') || 'Không'}.
-        
-        Hãy trả lời ngắn gọn, thân thiện, tập trung vào dinh dưỡng và sức khỏe.
-        Câu hỏi của người dùng: "${userMsg.text}"
+        Bạn là chuyên gia dinh dưỡng thân thiện.
+        Thông tin người dùng đang chat:
+        - Tên: ${profile.fullName}
+        - Cân nặng: ${profile.weightKg}kg, Chiều cao: ${profile.heightCm}cm
+        - Mục tiêu: ${profile.goals?.dailyCalories || 2000} kcal/ngày
+        - Dị ứng: ${profile.allergies || 'Không có'}
+        Hãy trả lời ngắn gọn, tập trung vào sức khỏe.
       `;
 
-      // 2. Gọi Gemini API
-      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-      const result = await model.generateContent(context);
-      const response = result.response;
-      const text = response.text();
-
-      const aiMsg: Message = { id: (Date.now() + 1).toString(), text: text, sender: 'ai' };
+      // GỌI VỀ BACKEND (An toàn tuyệt đối)
+      const res = await AIService.chat(userMsg.text, context);
+      
+      const aiReply = res?.reply || "Xin lỗi, mình đang mất kết nối.";
+      const aiMsg: Message = { id: (Date.now() + 1).toString(), text: aiReply, sender: 'ai' };
       setMessages(prev => [...prev, aiMsg]);
 
     } catch (error) {
-      console.error(error);
-      setMessages(prev => [...prev, { id: Date.now().toString(), text: 'Xin lỗi, tôi đang gặp sự cố kết nối. Vui lòng thử lại sau.', sender: 'ai' }]);
+      const errorMsg: Message = { id: Date.now().toString(), text: 'Lỗi kết nối Server.', sender: 'ai' };
+      setMessages(prev => [...prev, errorMsg]);
     } finally {
       setIsLoading(false);
     }
@@ -100,8 +88,8 @@ export default function ChatbotScreen() {
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <View>
-            <Text style={styles.headerTitle}>Trợ lý Dinh Dưỡng AI</Text>
-            <Text style={styles.headerSub}>Powered by Gemini</Text>
+            <Text style={styles.headerTitle}>Trợ lý Dinh Dưỡng</Text>
+            <Text style={styles.headerSub}>Powered by Gemini (Server)</Text>
         </View>
         <View style={{ width: 24 }} />
       </View>
@@ -115,7 +103,7 @@ export default function ChatbotScreen() {
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
         renderItem={({ item }) => (
           <View style={[styles.bubble, item.sender === 'user' ? styles.userBubble : styles.aiBubble]}>
-            {item.sender === 'ai' && <Ionicons name="logo-android" size={16} color={Colors.light.tint} style={{marginBottom: 4}} />}
+            {item.sender === 'ai' && <Ionicons name="logo-android" size={16} color={Colors.light.tint} style={{marginBottom:4}}/>}
             <Text style={[styles.text, item.sender === 'user' ? styles.userText : styles.aiText]}>
               {item.text}
             </Text>
@@ -123,25 +111,21 @@ export default function ChatbotScreen() {
         )}
       />
 
-      {/* Loading Indicator */}
-      {isLoading && (
-        <View style={{ marginLeft: 20, marginBottom: 10 }}>
-            <Text style={{color: '#888', fontSize: 12}}>AI đang nhập...</Text>
-        </View>
-      )}
+      {/* Loading */}
+      {isLoading && <Text style={{marginLeft: 20, color: '#888', marginBottom: 10}}>Đang soạn tin...</Text>}
 
-      {/* Input Area */}
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
+      {/* Input */}
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Hỏi thực đơn, calo, lời khuyên..."
+            placeholder="Hỏi thực đơn, calo..."
             value={inputText}
             onChangeText={setInputText}
             onSubmitEditing={sendMessage}
           />
           <TouchableOpacity style={styles.sendBtn} onPress={sendMessage} disabled={isLoading}>
-            {isLoading ? <ActivityIndicator color="#fff" size="small"/> : <Ionicons name="send" size={20} color="#fff" />}
+            {isLoading ? <ActivityIndicator size="small" color="#fff"/> : <Ionicons name="send" size={20} color="#fff" />}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -151,24 +135,17 @@ export default function ChatbotScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F2F2F2' },
-  header: {
-    backgroundColor: Colors.light.tint, flexDirection: 'row', alignItems: 'center', 
-    justifyContent: 'space-between', padding: 15, paddingTop: Platform.OS === 'android' ? 40 : 15,
-    elevation: 4, shadowColor: '#000', shadowOpacity: 0.1
-  },
-  backBtn: { padding: 5 },
+  header: { backgroundColor: Colors.light.tint, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 15, paddingTop: 40, elevation: 4 },
   headerTitle: { color: '#fff', fontSize: 18, fontWeight: 'bold', textAlign:'center' },
   headerSub: { color: 'rgba(255,255,255,0.8)', fontSize: 10, textAlign: 'center' },
-  
-  bubble: { maxWidth: '85%', padding: 14, borderRadius: 16, marginBottom: 12, elevation: 1 },
+  backBtn: { padding: 5 },
+  bubble: { maxWidth: '85%', padding: 12, borderRadius: 16, marginBottom: 10, elevation: 1 },
   userBubble: { alignSelf: 'flex-end', backgroundColor: Colors.light.tint, borderBottomRightRadius: 2 },
   aiBubble: { alignSelf: 'flex-start', backgroundColor: '#fff', borderBottomLeftRadius: 2 },
-  
   text: { fontSize: 15, lineHeight: 22 },
   userText: { color: '#fff' },
   aiText: { color: '#333' },
-  
-  inputContainer: { flexDirection: 'row', padding: 12, backgroundColor: '#fff', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#eee' },
-  input: { flex: 1, backgroundColor: '#f9f9f9', borderRadius: 24, paddingHorizontal: 18, paddingVertical: 12, marginRight: 10, fontSize: 15, borderWidth: 1, borderColor: '#eee' },
-  sendBtn: { backgroundColor: Colors.light.tint, width: 46, height: 46, borderRadius: 23, justifyContent: 'center', alignItems: 'center', elevation: 2 },
+  inputContainer: { flexDirection: 'row', padding: 10, backgroundColor: '#fff', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#eee' },
+  input: { flex: 1, backgroundColor: '#f9f9f9', borderRadius: 20, paddingHorizontal: 15, paddingVertical: 10, marginRight: 10, fontSize: 16 },
+  sendBtn: { backgroundColor: Colors.light.tint, width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
 });

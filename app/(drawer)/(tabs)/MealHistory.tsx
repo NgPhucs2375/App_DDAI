@@ -1,27 +1,25 @@
 import AppHeader from '@/components/AppHeader';
 import { Colors } from '@/constants/theme';
-import { loadMeals, Meal, removeMeal } from '@/src/data/mealStore';
+import { MealService } from '@/src/services/api';
+import { useUserStore } from '@/src/store/userStore';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics'; // Rung phản hồi
+import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    Alert,
-    Animated // Dùng cho Animation Skeleton
-    ,
-
-    FlatList,
-    Modal,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  Animated,
+  FlatList,
+  Modal,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 
-// --- COMPONENT SKELETON LOADING (UX PRO) ---
+// Skeleton Loading
 const SkeletonItem = () => {
   const opacity = new Animated.Value(0.3);
   useEffect(() => {
@@ -46,32 +44,33 @@ const SkeletonItem = () => {
 };
 
 export default function MealHistoryTab() {
-  const [data, setData] = useState<Meal[]>([]);
+  const userId = useUserStore(s => s.profile.id);
+  const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [editingItem, setEditingItem] = useState<Meal | null>(null);
+  const [selectedItem, setSelectedItem] = useState<any>(null); // Item đang xem chi tiết
 
   const loadData = useCallback(async () => {
-    // Không set loading=true khi refresh để tránh giật màn hình
     if (!refreshing) setLoading(true); 
     try {
-      const meals = await loadMeals();
-      // Giả lập delay mạng một chút để thấy hiệu ứng Skeleton (0.5s)
-      await new Promise(r => setTimeout(r, 500)); 
-      setData(meals);
+      if (userId) {
+        const meals = await MealService.getHistory(Number(userId));
+        if (Array.isArray(meals)) {
+            setData(meals);
+        }
+      }
     } catch (error) {
       console.error(error);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [refreshing]);
+  }, [refreshing, userId]);
 
   useFocusEffect(
     useCallback(() => {
       loadData();
-    }, [])
+    }, [loadData])
   );
 
   const onRefresh = () => {
@@ -80,51 +79,34 @@ export default function MealHistoryTab() {
   };
 
   const handleDelete = (id: string) => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); // Rung cảnh báo
-    Alert.alert('Xác nhận', 'Xóa bữa ăn này?', [
-      { text: 'Huỷ', style: 'cancel' },
-      {
-        text: 'Xóa',
-        style: 'destructive',
-        onPress: async () => {
-            const updatedList = await removeMeal(id);
-            setData(updatedList);
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); // Rung xác nhận
-        },
-      },
-    ]);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    Alert.alert('Thông báo', 'Chức năng xóa đang được nâng cấp trên Server', [{ text: 'OK' }]);
   };
 
-  const openEditModal = (item: Meal) => {
-    Haptics.selectionAsync();
-    setEditingItem({ ...item });
-    setModalVisible(true);
-  };
-
-  const handleSaveEdit = () => {
-    if (!editingItem) return;
-    setData((prev) => prev.map((item) => (item.id === editingItem.id ? editingItem : item)));
-    setModalVisible(false);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  };
-
-  const renderItem = ({ item }: { item: Meal }) => (
+  const renderItem = ({ item }: { item: any }) => (
     <Swipeable renderRightActions={() => (
         <TouchableOpacity style={styles.deleteAction} onPress={() => handleDelete(item.id)}>
             <Ionicons name="trash-outline" size={24} color="#fff" />
         </TouchableOpacity>
     )}>
-      <TouchableOpacity style={styles.card} activeOpacity={0.7} onPress={() => openEditModal(item)}>
+      <TouchableOpacity 
+        style={styles.card} 
+        activeOpacity={0.7} 
+        onPress={() => {
+            Haptics.selectionAsync();
+            setSelectedItem(item);
+        }}
+      >
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>
             {item.mealType === 'breakfast' ? 'Sáng' : item.mealType === 'lunch' ? 'Trưa' : item.mealType === 'dinner' ? 'Tối' : 'Ăn vặt'}
           </Text>
-          <Text style={styles.time}>{new Date(item.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Text>
+          <Text style={styles.time}>{new Date(item.createdAt).toLocaleDateString('vi-VN')}</Text>
         </View>
-        <Text style={styles.cardText}>{item.items}</Text>
+        <Text style={styles.cardText} numberOfLines={1}>{item.items}</Text>
         <View style={styles.footerRow}>
            <Text style={styles.badge}>{item.calories} kcal</Text>
-           <Ionicons name="create-outline" size={16} color={Colors.light.icon} />
+           {item.protein > 0 && <Text style={styles.subBadge}>Đạm: {item.protein}g</Text>}
         </View>
       </TouchableOpacity>
     </Swipeable>
@@ -134,20 +116,17 @@ export default function MealHistoryTab() {
     <View style={styles.container}>
       <AppHeader />
       <View style={{paddingHorizontal: 20, paddingVertical: 15}}>
-         <Text style={{fontSize: 22, fontWeight: '800', color: '#333'}}>Lịch sử 📅</Text>
-         <Text style={{fontSize: 13, color: '#888'}}>Vuốt để xóa • Chạm để sửa</Text>
+         <Text style={{fontSize: 22, fontWeight: '800', color: '#333'}}>Lịch sử ăn uống 📅</Text>
+         <Text style={{fontSize: 13, color: '#888'}}>Dữ liệu từ Server</Text>
       </View>
 
       {loading && !refreshing ? (
-        // HIỂN THỊ SKELETON KHI LOADING
-        <View style={styles.list}>
-            <SkeletonItem /><SkeletonItem /><SkeletonItem />
-        </View>
+        <View style={styles.list}><SkeletonItem /><SkeletonItem /><SkeletonItem /></View>
       ) : (
         <FlatList
           contentContainerStyle={styles.list}
           data={data}
-          keyExtractor={(x) => x.id}
+          keyExtractor={(x) => x.id.toString()}
           renderItem={renderItem}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.light.tint} />}
           ListFooterComponent={data.length === 0 ? 
@@ -159,18 +138,37 @@ export default function MealHistoryTab() {
         />
       )}
 
-      {/* Modal Sửa giữ nguyên UI nhưng thêm Haptics ở trên */}
-      <Modal visible={modalVisible} animationType="fade" transparent>
+      {/* Modal Chi Tiết Món Ăn */}
+      <Modal visible={!!selectedItem} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Chỉnh sửa</Text>
-            <TextInput style={styles.input} value={editingItem?.items} onChangeText={(t) => setEditingItem(prev => prev ? ({ ...prev, items: t }) : null)} />
-            <TextInput style={styles.input} keyboardType="numeric" value={editingItem?.calories?.toString()} onChangeText={(t) => setEditingItem(prev => prev ? ({ ...prev, calories: Number(t) }) : null)} />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={[styles.btn, styles.btnCancel]} onPress={() => setModalVisible(false)}><Text style={styles.btnText}>Huỷ</Text></TouchableOpacity>
-              <TouchableOpacity style={[styles.btn, styles.btnSave]} onPress={handleSaveEdit}><Text style={[styles.btnText, { color: '#fff' }]}>Lưu</Text></TouchableOpacity>
+            <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>{selectedItem?.items}</Text>
+                <View style={styles.modalDivider}/>
+                
+                <View style={styles.modalRow}>
+                    <Text style={{fontSize:16}}>🔥 Calo:</Text> 
+                    <Text style={{fontWeight:'bold', fontSize:16, color:'#E74C3C'}}>{selectedItem?.calories} kcal</Text>
+                </View>
+                <View style={styles.modalRow}>
+                    <Text style={{fontSize:16}}>🥩 Đạm:</Text> 
+                    <Text style={{fontWeight:'bold', fontSize:16, color:'#3498DB'}}>{selectedItem?.protein}g</Text>
+                </View>
+                <View style={styles.modalRow}>
+                    <Text style={{fontSize:16}}>🍚 Carb:</Text> 
+                    <Text style={{fontWeight:'bold', fontSize:16, color:'#F1C40F'}}>{selectedItem?.carbs}g</Text>
+                </View>
+                <View style={styles.modalRow}>
+                    <Text style={{fontSize:16}}>🥑 Béo:</Text> 
+                    <Text style={{fontWeight:'bold', fontSize:16, color:'#E67E22'}}>{selectedItem?.fat}g</Text>
+                </View>
+
+                <TouchableOpacity 
+                    style={styles.closeBtn} 
+                    onPress={() => setSelectedItem(null)}
+                >
+                    <Text style={{color:'#fff', fontWeight:'bold', fontSize:16}}>Đóng</Text>
+                </TouchableOpacity>
             </View>
-          </View>
         </View>
       </Modal>
     </View>
@@ -185,18 +183,17 @@ const styles = StyleSheet.create({
   cardTitle: { fontWeight: '700', color: Colors.light.tint, textTransform: 'uppercase', fontSize: 12 },
   time: { color: '#999', fontSize: 12 },
   cardText: { color: '#333', fontSize: 18, fontWeight: '600', marginBottom: 10 },
-  footerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  footerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   badge: { backgroundColor: '#F0F0F0', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, color: '#555', fontWeight: '700', fontSize: 13, overflow: 'hidden' },
+  subBadge: { fontSize: 12, color: '#888' },
   deleteAction: { backgroundColor: '#FF5252', justifyContent: 'center', alignItems: 'center', width: 80, height: '84%', marginTop: 0, borderRadius: 16, marginLeft: 10 },
   emptyBox: { alignItems: 'center', marginTop: 50 },
   
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 30 },
+  // Modal Styles
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 30 },
   modalContent: { backgroundColor: '#fff', borderRadius: 20, padding: 25, elevation: 5 },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 20, textAlign: 'center', color: '#333' },
-  input: { borderWidth: 1, borderColor: '#eee', borderRadius: 12, padding: 15, marginBottom: 15, fontSize: 16, backgroundColor: '#FAFAFA' },
-  modalButtons: { flexDirection: 'row', gap: 15, marginTop: 10 },
-  btn: { flex: 1, padding: 15, borderRadius: 12, alignItems: 'center' },
-  btnCancel: { backgroundColor: '#F0F0F0' },
-  btnSave: { backgroundColor: Colors.light.tint },
-  btnText: { fontWeight: '700', fontSize: 15 },
+  modalTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 10, textAlign: 'center', color: '#333' },
+  modalDivider: { height: 1, backgroundColor: '#eee', marginBottom: 15 },
+  modalRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#f9f9f9', paddingBottom: 8 },
+  closeBtn: { backgroundColor: Colors.light.tint, padding: 12, borderRadius: 12, alignItems: 'center', marginTop: 15 }
 });

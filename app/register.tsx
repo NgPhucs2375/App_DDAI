@@ -1,4 +1,4 @@
-import { useUserStore } from '@/src/store/userStore';
+import { AuthService } from '@/src/services/api'; // Import Service API
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -13,30 +13,26 @@ export default function RegisterScreen() {
 
   const onRegister = async () => {
     setError(null);
-    if (!email || !password) {
-      setError('Vui lòng nhập email và mật khẩu');
+    if (!email || !password || !name) {
+      setError('Vui lòng nhập đầy đủ: Tên, Email và Mật khẩu');
       return;
     }
     setLoading(true);
+    
     try {
-      // Tạo ID và Profile mặc định
-      const defaultProfile = {
-        id: Date.now().toString(),
-        fullName: name || 'User ' + Date.now().toString().slice(-4),
-        goals: { dailyCalories: 2000 },
-        createdAt: new Date().toISOString(),
-        // Các trường khác sẽ dùng mặc định của Store (đã định nghĩa trong userStore.ts)
-      };
+      // --- GỌI API ĐĂNG KÝ ---
+      const res = await AuthService.register(email, password, name);
 
-      // 1. Dùng Store để lưu trạng thái đăng nhập và Profile
-      useUserStore.getState().setProfile(defaultProfile);
-      useUserStore.getState().setLogin(true, 'mock_token_' + Date.now()); 
-      
-      Alert.alert('Thành công', 'Đăng ký hoàn tất, đang chuyển đến trang chủ');
-      router.replace('/'); // Chuyển sang root layout
+      if (res && res.message === "Đăng ký thành công") {
+        Alert.alert('Thành công', 'Tài khoản đã được tạo. Vui lòng đăng nhập ngay!');
+        router.replace('/login'); // Chuyển về màn hình đăng nhập
+      } else {
+        // Hiển thị lỗi từ Server (ví dụ: Email đã tồn tại)
+        setError(res?.detail || 'Đăng ký thất bại. Vui lòng thử lại.');
+      }
     } catch (e) {
       console.error(e);
-      setError('Đăng ký thất bại, thử lại');
+      setError('Lỗi kết nối đến Server.');
     } finally {
       setLoading(false);
     }
@@ -44,8 +40,7 @@ export default function RegisterScreen() {
 
   return (
     <View style={styles.container}>
-      {/* ... (UI giữ nguyên) */}
-      <Text style={styles.title}>Đăng ký</Text>
+      <Text style={styles.title}>Đăng ký Tài khoản</Text>
 
       <TextInput
         placeholder="Họ và tên"
@@ -84,7 +79,6 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
-  // ... (Styles giữ nguyên)
   container: {
     flex: 1,
     padding: 24,
@@ -96,38 +90,44 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 24,
     textAlign: 'center',
+    color: '#333',
   },
   input: {
-    height: 48,
-    borderColor: '#ddd',
+    height: 50,
+    borderColor: '#E0E0E0',
     borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    marginBottom: 12,
-    backgroundColor: '#fafafa',
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    marginBottom: 15,
+    backgroundColor: '#FAFAFA',
+    fontSize: 16,
   },
   button: {
-    height: 48,
-    backgroundColor: '#0288D1',
-    borderRadius: 8,
+    height: 50,
+    backgroundColor: '#C1121F', // Dùng màu đỏ chủ đạo của App bạn
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 6,
+    marginTop: 10,
+    elevation: 2,
   },
   buttonText: {
     color: '#fff',
-    fontWeight: '600',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   link: {
-    marginTop: 12,
+    marginTop: 20,
     alignItems: 'center',
   },
   linkText: {
-    color: '#0288D1',
+    color: '#007AFF',
+    fontSize: 16,
   },
   error: {
-    color: '#c00',
-    marginBottom: 8,
+    color: '#D32F2F',
+    marginBottom: 15,
     textAlign: 'center',
+    fontWeight: '500',
   },
 });

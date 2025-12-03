@@ -1,88 +1,87 @@
+import { API_URL } from '@/src/constants/ApiConfig'; // Import địa chỉ IP
+import { AuthService } from '@/src/services/api';
 import { useUserStore } from '@/src/store/userStore';
-import { router } from 'expo-router';
-import React from "react";
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from "react";
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-// định nghĩa style
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 30,
-    backgroundColor: '#ecf0f1',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2c3e50',
-    textAlign: 'center',
-    marginBottom: 40,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#bdc3c7',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 15,
-    backgroundColor: '#fff',
-  },
-  button: {
-    backgroundColor: '#1abc9c',
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  link: {
-    color: '#2980b9',
-    textAlign: 'center',
-    marginTop: 10,
-  },
-});
 
+export default function LoginScreen() {
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  
+  // State để hiển thị trạng thái kết nối Server
+  const [serverStatus, setServerStatus] = useState<string>('Đang dò tìm server Python...');
+  const [isConnected, setIsConnected] = useState(false);
 
-export default function LoginScreen(){
-  const [email,setEmail]=React.useState('');
-  const [password,setPassword]=React.useState('');
+  // --- HÀM TỰ ĐỘNG KIỂM TRA SERVER ---
+  useEffect(() => {
+    checkServerConnection();
+  }, []);
 
-  const handleLogin = () => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    
-    if(!email || !password){
-      Alert.alert('Vui lòng nhập đầy đủ thông tin');
-      return;
+  const checkServerConnection = async () => {
+    try {
+      console.log(`Đang thử kết nối tới: ${API_URL}/products/`);
+      // Gọi thử API lấy danh sách sản phẩm
+      const response = await fetch(`${API_URL}/meals/`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setIsConnected(true);
+        setServerStatus(`✅ Đã kết nối thành công!\nBackend đang chạy ngon lành.\n(Tìm thấy ${data.length} sản phẩm trong DB)`);
+      } else {
+        setServerStatus(`⚠️ Tìm thấy Server nhưng bị lỗi: ${response.status}`);
+      }
+    } catch (error) {
+      console.error("Lỗi kết nối:", error);
+      setServerStatus(`❌ Không thể kết nối tới ${API_URL}\n1. Kiểm tra lại IPv4 trong ApiConfig.ts\n2. Đảm bảo server đang chạy với lệnh --host 0.0.0.0`);
     }
-    if(!emailRegex.test(email)){
-      Alert.alert('Email không hợp lệ');
+  };
+  // ------------------------------------
+
+  const handleLogin = async() => {
+ if (!email || !password) {
+      Alert.alert('Lỗi', 'Vui lòng nhập đủ thông tin');
       return;
     }
 
-    if (email === 'admin@gmail.com' && password === '123456') {
-        // Đăng nhập Admin
-        useUserStore.getState().setLogin(true, 'admin_token'); 
-        Alert.alert('Chào Admin', 'Đang chuyển đến trang quản trị...');
-        router.replace('/admin/dashboard' as any);
-    } else if (emailRegex.test(email)) { // User thường (Logic giả định: email hợp lệ là đăng nhập được)
-        // Đăng nhập User
-        useUserStore.getState().setLogin(true, 'user_token');
-        Alert.alert('Thành công', 'Đăng nhập thành công!');
+    // Gọi API Login thật
+    const res = await AuthService.login(email, password);
+
+    if (res && res.message === "Đăng nhập thành công") {
+        // LƯU USER_ID VÀO STORE ĐỂ DÙNG TOÀN APP
+        useUserStore.getState().setLogin(true, 'token_demo'); 
+        useUserStore.getState().setProfile({ 
+            id: res.user_id, // <--- QUAN TRỌNG: Lưu ID thật từ DB
+            fullName: res.full_name,
+            goals: { dailyCalories: res.target_calories }
+        });
+
+        Alert.alert('Thành công', `Chào mừng ${res.full_name}!`);
         router.replace('/'); 
     } else {
-        Alert.alert('Lỗi', 'Thông tin đăng nhập không đúng');
+        Alert.alert('Thất bại', res?.detail || 'Sai email hoặc mật khẩu');
     }
   };
 
   return (
     <View style={styles.container}>
-      {/* ... (UI giữ nguyên) */}
       <Text style={styles.title}>Đăng Nhập</Text>
 
+      {/* --- KHUNG TEST KẾT NỐI (Chỉ dùng cho Demo) --- */}
+      <View style={[styles.statusBox, { backgroundColor: isConnected ? '#d4edda' : '#f8d7da' }]}>
+        <Text style={{fontWeight: 'bold', marginBottom: 5}}>TRẠNG THÁI SERVER:</Text>
+        <Text style={{color: '#333'}}>{serverStatus}</Text>
+        {!isConnected && (
+            <TouchableOpacity onPress={checkServerConnection} style={styles.retryBtn}>
+                <Text style={{color: 'blue'}}>Thử lại</Text>
+            </TouchableOpacity>
+        )}
+      </View>
+      {/* ----------------------------------------------- */}
+
       <TextInput
-        placeholder='Email'
+        placeholder='Email (admin@gmail.com)'
         value={email}
         onChangeText={setEmail}
         style={styles.input}
@@ -90,7 +89,7 @@ export default function LoginScreen(){
         autoCapitalize='none'
       />
       <TextInput
-        placeholder='Mật khẩu'
+        placeholder='Mật khẩu (123456)'
         value={password}
         onChangeText={setPassword}
         secureTextEntry
@@ -100,12 +99,23 @@ export default function LoginScreen(){
       <TouchableOpacity style={styles.button} onPress={handleLogin}>
         <Text style={styles.buttonText}>Đăng Nhập</Text>
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => router.push('/forgot-password')} style={{ marginBottom: 15 }}>
-        <Text style={{ color: '#555', textAlign: 'center' }}>Quên mật khẩu?</Text>
-      </TouchableOpacity>
+
       <TouchableOpacity onPress={() => router.push('/register')}>
         <Text style={styles.link}>Chưa có tài khoản? Đăng ký</Text>
       </TouchableOpacity>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, justifyContent: 'center', paddingHorizontal: 30, backgroundColor: '#ecf0f1' },
+  title: { fontSize: 28, fontWeight: 'bold', color: '#2c3e50', textAlign: 'center', marginBottom: 20 },
+  input: { borderWidth: 1, borderColor: '#bdc3c7', borderRadius: 10, padding: 12, marginBottom: 15, backgroundColor: '#fff' },
+  button: { backgroundColor: '#1abc9c', paddingVertical: 12, borderRadius: 10, alignItems: 'center', marginBottom: 10 },
+  buttonText: { color: 'white', fontSize: 18, fontWeight: '600' },
+  link: { color: '#2980b9', textAlign: 'center', marginTop: 10 },
+  
+  // Style cho khung status
+  statusBox: { padding: 15, borderRadius: 8, marginBottom: 20, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' },
+  retryBtn: { marginTop: 10, alignSelf: 'flex-start' }
+});
