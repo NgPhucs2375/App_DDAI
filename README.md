@@ -92,12 +92,6 @@
     * **Biểu đồ Cột/Tròn:** Xem tổng Calo nạp vào so với Mục tiêu theo khoảng thời gian tùy chọn (Ngày/Tuần/Tháng).
     * **Phân tích AI:** Gửi dữ liệu lịch sử ăn uống lên Gemini để nhận **Đánh giá tổng quan, Gợi ý cải thiện, Nhắc nhở động lực** (dạng 3 đoạn văn chuyên nghiệp).
 
-graph TD
-    %% Định nghĩa các Style
-    classDef mobile fill:#f9f,stroke:#333,stroke-width:2px,color:black;
-    classDef backend fill:#bbf,stroke:#333,stroke-width:2px,color:black;
-    classDef db fill:#bfb,stroke:#333,stroke-width:2px,color:black;
-    classDef ai fill:#fbb,stroke:#333,stroke-width:2px,color:black;
 
 ```mermaid
 graph TD
