@@ -99,7 +99,15 @@ graph TD
     classDef db fill:#bfb,stroke:#333,stroke-width:2px,color:black;
     classDef ai fill:#fbb,stroke:#333,stroke-width:2px,color:black;
 
-    %% Các thực thể
+```mermaid
+graph TD
+    %% Định nghĩa Style (Màu sắc cho đẹp)
+    classDef mobile fill:#ffe0b2,stroke:#e65100,stroke-width:2px,color:black;
+    classDef backend fill:#bbdefb,stroke:#0d47a1,stroke-width:2px,color:black;
+    classDef db fill:#c8e6c9,stroke:#1b5e20,stroke-width:2px,color:black;
+    classDef ai fill:#e1bee7,stroke:#4a148c,stroke-width:2px,color:black;
+
+    %% --- CÁC THỰC THỂ ---
     User((👤 User))
     Admin((🛡️ Admin))
     
@@ -118,29 +126,30 @@ graph TD
     DB[(🗄️ SQLite Database)]
     Gemini[[✨ Google Gemini 2.5 Flash]]
 
-    %% Luồng dữ liệu
-    User -->|Login/Input| UI
-    Admin -->|Quản lý| UI
+    %% --- LUỒNG DỮ LIỆU ---
+    User -->|1. Login/Input| UI
+    Admin -->|2. Quản lý| UI
     
-    UI <-->|REST API JSON| Auth
-    UI <-->|REST API JSON| MealAPI
-    UI <-->|REST API JSON| CommAPI
-    UI <-->|Gửi ảnh Base64| AICore
+    UI <-->|3. JSON API| Auth
+    UI <-->|4. JSON API| MealAPI
+    UI <-->|5. JSON API| CommAPI
+    UI <-->|6. Gửi ảnh Base64| AICore
 
     Auth <-->|Read/Write| DB
     MealAPI <-->|Read/Write| DB
     CommAPI <-->|Read/Write| DB
     
-    AICore <-->|Tra cứu Menu| DB
-    AICore <-->|1. Gửi ảnh + Context| Gemini
-    Gemini -->|2. Trả về JSON Dinh dưỡng| AICore
-    AICore -->|3. Tự động lưu món mới| DB
+    AICore <-->|7. Tra cứu Menu| DB
+    AICore <-->|8. Gửi ảnh + Context| Gemini
+    Gemini -->|9. Trả về JSON Dinh dưỡng| AICore
+    AICore -->|10. Tự động lưu món mới| DB
 
-    %% Gán class style
+    %% Áp dụng màu sắc
     class UI,Store mobile;
     class Auth,MealAPI,AICore,CommAPI backend;
     class DB db;
     class Gemini ai;
+```
 ---
 
 ## 4. Kết luận
