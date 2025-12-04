@@ -92,8 +92,55 @@
     * **Biểu đồ Cột/Tròn:** Xem tổng Calo nạp vào so với Mục tiêu theo khoảng thời gian tùy chọn (Ngày/Tuần/Tháng).
     * **Phân tích AI:** Gửi dữ liệu lịch sử ăn uống lên Gemini để nhận **Đánh giá tổng quan, Gợi ý cải thiện, Nhắc nhở động lực** (dạng 3 đoạn văn chuyên nghiệp).
 
-![Sơ đồ kiến trúc hệ thống](https://via.placeholder.com/800x400?text=System+Architecture+Diagram)
+graph TD
+    %% Định nghĩa các Style
+    classDef mobile fill:#f9f,stroke:#333,stroke-width:2px,color:black;
+    classDef backend fill:#bbf,stroke:#333,stroke-width:2px,color:black;
+    classDef db fill:#bfb,stroke:#333,stroke-width:2px,color:black;
+    classDef ai fill:#fbb,stroke:#333,stroke-width:2px,color:black;
 
+    %% Các thực thể
+    User((👤 User))
+    Admin((🛡️ Admin))
+    
+    subgraph Client [📱 Mobile App - React Native]
+        UI[Giao diện UI/UX]
+        Store[Local Store]
+    end
+
+    subgraph Server [⚙️ Backend - Python FastAPI]
+        Auth[Auth Service]
+        MealAPI[Meal Service]
+        AICore[AI Processing]
+        CommAPI[Community API]
+    end
+
+    DB[(🗄️ SQLite Database)]
+    Gemini[[✨ Google Gemini 2.5 Flash]]
+
+    %% Luồng dữ liệu
+    User -->|Login/Input| UI
+    Admin -->|Quản lý| UI
+    
+    UI <-->|REST API JSON| Auth
+    UI <-->|REST API JSON| MealAPI
+    UI <-->|REST API JSON| CommAPI
+    UI <-->|Gửi ảnh Base64| AICore
+
+    Auth <-->|Read/Write| DB
+    MealAPI <-->|Read/Write| DB
+    CommAPI <-->|Read/Write| DB
+    
+    AICore <-->|Tra cứu Menu| DB
+    AICore <-->|1. Gửi ảnh + Context| Gemini
+    Gemini -->|2. Trả về JSON Dinh dưỡng| AICore
+    AICore -->|3. Tự động lưu món mới| DB
+
+    %% Gán class style
+    class UI,Store mobile;
+    class Auth,MealAPI,AICore,CommAPI backend;
+    class DB db;
+    class Gemini ai;
 ---
 
 ## 4. Kết luận
