@@ -150,6 +150,87 @@ graph TD
     class DB db;
     class Gemini ai;
 ```
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ffffcc', 'edgeLabelBackground':'#ffffff', 'clusterBkg': '#ffffff', 'fontSize': '13px', 'fontFamily': 'Arial'}}}%%
+
+flowchart TD
+    %% --- ĐỊNH NGHĨA STYLE GIỐNG POWERDESIGNER ---
+    %% Process: Hình bo tròn, màu vàng nhạt
+    classDef process fill:#ffffcc,stroke:#000000,stroke-width:1px,color:#000000,rx:10,ry:10;
+    
+    %% Entity: Hình vuông, màu xám nhạt
+    classDef entity fill:#e6e6e6,stroke:#000000,stroke-width:1px,color:#000000,rx:0,ry:0;
+    
+    %% Data Store: Hình vuông, màu xanh biển nhạt (Resource Style)
+    classDef store fill:#c8ffff,stroke:#000000,stroke-width:1px,color:#000000,rx:0,ry:0;
+
+    %% --- CÁC ĐỐI TƯỢNG ---
+    
+    %% Tác nhân (External Entities)
+    User["👤 Người dùng (User)"]:::entity
+    Admin["🛡️ Quản trị viên (Admin)"]:::entity
+    Gemini["✨ Google Gemini AI"]:::entity
+
+    %% Tiến trình (Processes)
+    P1("1.0 Quản lý Tài khoản"):::process
+    P2("2.0 Quản lý Bữa ăn"):::process
+    P3("3.0 Xử lý AI & Tự Học"):::process
+    P4("4.0 Báo cáo Thống kê"):::process
+    P5("5.0 Cộng đồng & Admin"):::process
+
+    %% Kho dữ liệu (Data Stores)
+    D1["D1: Users"]:::store
+    D2["D2: ThucPham"]:::store
+    D3["D3: Meals"]:::store
+    D4["D4: Posts"]:::store
+    D5["D5: Feedbacks"]:::store
+
+    %% --- LUỒNG DỮ LIỆU (DATA FLOWS) ---
+
+    %% 1. Luồng Auth
+    User -->|Email/Pass| P1
+    P1 -->|Tra cứu| D1
+    D1 -->|User Info| P1
+    P1 -->|Token| User
+
+    %% 3. Luồng AI (Cốt lõi)
+    User -->|Ảnh Base64| P3
+    P3 -->|Gửi ảnh + Menu| Gemini
+    Gemini -->|JSON Dinh dưỡng| P3
+    D2 -.->|Lấy ds Tên món| P3
+    P3 -.->|TỰ ĐỘNG LƯU MÓN MỚI| D2
+    P3 -->|Kết quả phân tích| User
+
+    %% 2. Luồng Meal
+    User -->|Tìm kiếm| P2
+    P2 -->|Tra cứu| D2
+    P2 -->|Lưu bữa ăn| D3
+    D3 -->|Lịch sử| P2
+
+    %% 4. Luồng Report
+    User -->|Xem Báo cáo| P4
+    P4 -->|Lấy dữ liệu| D3
+    P4 -->|Lấy mục tiêu| D1
+    P4 -->|Biểu đồ| User
+
+    %% 5. Luồng Community
+    User -->|Like/Comment| P5
+    Admin -->|Đăng bài| P5
+    P5 -->|Lưu Post| D4
+    P5 -->|Lưu Feedback| D5
+    P5 -->|Newsfeed| User
+    D5 -->|Ds Góp ý| Admin
+
+    %% Sắp xếp bố cục (Hack để hình đẹp hơn)
+    subgraph System [Hệ Thống App Dinh Dưỡng]
+        direction TB
+        P1
+        P3
+        P2
+        P4
+        P5
+    end
+```
 ---
 
 ## 4. Kết luận
