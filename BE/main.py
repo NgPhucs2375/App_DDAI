@@ -399,3 +399,28 @@ def delete_food(food_id: str, db: Session = Depends(get_db)):
         db.commit()
         return {"message": "Đã xóa món rác!"}
     raise HTTPException(404, "Không tìm thấy món")
+
+@app.on_event("startup")
+def startup_event():
+    db = SessionLocal()
+    try:
+        # Kiểm tra xem Admin đã tồn tại chưa
+        admin = db.query(User).filter(User.email == "admin@gmail.com").first()
+        if not admin:
+            print("⚠️ Chưa có Admin trên Cloud. Đang tạo mới...")
+            new_admin = User(
+                email="admin@gmail.com",
+                password="123456",  # Lưu ý: Pass đang để lộ thiên cho demo
+                full_name="Super Admin",
+                is_admin=True,      # Cấp quyền Admin
+                target_calories=2000
+            )
+            db.add(new_admin)
+            db.commit()
+            print("✅ ĐÃ TẠO TÀI KHOẢN ADMIN: admin@gmail.com / 123456")
+        else:
+            print("✅ Admin đã tồn tại.")
+    except Exception as e:
+        print(f"❌ Lỗi khởi tạo Admin: {e}")
+    finally:
+        db.close()
