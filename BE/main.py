@@ -10,7 +10,9 @@ import json
 import google.generativeai as genai
 from typing import Optional, List, Dict
 import os
-from dotenv import load_dotenv # 1. Import thư viện đọc file .env
+from dotenv import load_dotenv
+from pydantic import BaseModel, Field, validator
+
 # ==========================================
 # 1. CẤU HÌNH AI & DATABASE
 # ==========================================
@@ -18,30 +20,45 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 genai.configure(api_key=GEMINI_API_KEY)
 
-# Cấu hình trả về JSON để xử lý tự động
+# Cấu hình trả về JSON
 generation_config = {
-    "temperature": 0.4,
+    "temperature": 0.7, # Tăng sáng tạo lên một chút để AI chém gió hay hơn
     "top_p": 0.95,
     "top_k": 64,
     "max_output_tokens": 8192,
     "response_mime_type": "application/json",
 }
 
-# Dùng model 2.5 Flash mới nhất
+# Dùng model Flash cho nhanh
 model = genai.GenerativeModel(
-    model_name="gemini-2.5-flash",
+    model_name="gemini-2.5-flash", # Hoặc gemini-1.5-flash tùy key của bạn
     generation_config=generation_config,
 )
 
-DATABASE_URL = "sqlite:///./dulieu.db"
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+# Chat model riêng (text thường)
+chat_model = genai.GenerativeModel('gemini-2.5-flash')
+
+# Cấu hình Database =========================================== 
+
+DATABASE_URL = os.getenv("DATABASE_URL") 
+
+if not DATABASE_URL:
+    # Cấu hình cho Local (Máy tính của bạn)
+    DATABASE_URL = "sqlite:///./dulieu.db"
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    # Cấu hình cho Cloud (Render - PostgreSQL)
+    # Fix lỗi "postgres://" cũ của Render thành "postgresql://" mới
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    engine = create_engine(DATABASE_URL)
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 # ==========================================
 # 2. ĐỊNH NGHĨA BẢNG (TABLES)
 # ==========================================
-
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -70,6 +87,7 @@ class ThucPham(Base):
     ChatBeo = Column(Float)
     ChatXo = Column(Float)
     Vitamin = Column(String)
+    is_verified = Column(Boolean, default=False)
 
 class Meal(Base):
     __tablename__ = "meals"
@@ -105,28 +123,46 @@ class Post(Base):
 Base.metadata.create_all(bind=engine)
 
 # ==========================================
-# 3. SCHEMAS (Input Models)
+# 3. SCHEMAS
 # ==========================================
 class UserRegister(BaseModel):
     email: str; password: str; full_name: str
 class UserLogin(BaseModel):
     email: str; password: str
 class UserUpdate(BaseModel):
-    height: Optional[float] = None; weight: Optional[float] = None; age: Optional[int] = None
-    gender: Optional[str] = None; target_weight: Optional[float] = None; activity_level: Optional[str] = None
-    target_calories: Optional[int] = None; target_date: Optional[str] = None; allergies: Optional[str] = None
-class ImagePayload(BaseModel): image_base64: str
+    height: Optional[float] = Field(None, gt=50, lt=300, description="Chiều cao cm (50-300)")
+    weight: Optional[float] = Field(None, gt=20, lt=500, description="Cân nặng kg (20-500)")
+    age: Optional[int] = Field(None, gt=5, lt=120, description="Tuổi (5-120)")
+    gender: Optional[str] = None
+    target_weight: Optional[float] = Field(None, gt=20)
+    activity_level: Optional[str] = None
+    target_calories: Optional[int] = Field(None, gt=500, lt=10000) # Không cho phép mục tiêu đói lả hoặc ăn quá nhiều
+    target_date: Optional[str] = None
+    allergies: Optional[str] = None
+    
+class ImagePayload(BaseModel): 
+    image_base64: str
+    user_id: int
 class MealCreate(BaseModel):
-    user_id: int; mealType: str; items: str; calories: float
-    protein: float = 0; carbs: float = 0; fat: float = 0
+    user_id: int
+    mealType: str
+    items: str
+    calories: float = Field(..., ge=0, description="Calo không được âm") # ge=0: greater or equal 0
+    protein: float = Field(0, ge=0)
+    carbs: float = Field(0, ge=0)
+    fat: float = Field(0, ge=0)
+    
+    @validator('items')
+    def name_must_be_valid(cls, v):
+        if not v or len(v.strip()) < 2:
+            raise ValueError('Tên món ăn quá ngắn')
+        return v
+    
 class PasswordChange(BaseModel): old_password: str; new_password: str
 class ReportData(BaseModel): user_name: str; target_cal: int; data_summary: List[Dict]
 class FeedbackCreate(BaseModel): user_id: int; user_name: str; content: str
 class PostCreate(BaseModel): user_name: str; content: str; avatar: str = "https://i.pravatar.cc/150?img=12"
-
-class ChatRequest(BaseModel):
-    message: str
-    context: str = ""
+class ChatRequest(BaseModel): message: str; context: str = ""
 
 # ==========================================
 # 4. API HANDLING
@@ -136,10 +172,8 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, 
 
 def get_db():
     db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    try: yield db
+    finally: db.close()
 
 # --- AUTH ---
 @app.post("/auth/register")
@@ -153,7 +187,7 @@ def register(user: UserRegister, db: Session = Depends(get_db)):
 def login(user: UserLogin, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.email == user.email, User.password == user.password).first()
     if not db_user: raise HTTPException(400, "Sai thông tin")
-    return {"message": "Đăng nhập thành công", "user_id": db_user.id, "full_name": db_user.full_name, "target_calories": db_user.target_calories}
+    return {"message": "Đăng nhập thành công", "user_id": db_user.id, "full_name": db_user.full_name, "target_calories": db_user.target_calories,"is_admin": db_user.is_admin}
 
 @app.post("/auth/change-password/{user_id}")
 def change_password(user_id: int, pw: PasswordChange, db: Session = Depends(get_db)):
@@ -174,8 +208,8 @@ def update_profile(user_id: int, p: UserUpdate, db: Session = Depends(get_db)):
     data = p.dict(exclude_unset=True)
     for k, v in data.items(): setattr(u, k, v)
     
-    # Tính TDEE nếu cần
-    if not p.target_calories or p.target_calories == 0:
+    # Tính TDEE tự động (Pillar 3: Logic)
+    if u.weight > 0 and u.height > 0 and u.age > 0:
         bmr = (10 * u.weight + 6.25 * u.height - 5 * u.age + (5 if u.gender == "Nam" else -161))
         tdee = bmr * (1.55 if u.activity_level == "Vừa" else 1.2)
         if u.target_weight < u.weight: tdee -= 500
@@ -190,64 +224,67 @@ def update_profile(user_id: int, p: UserUpdate, db: Session = Depends(get_db)):
 def search_food(query: str, db: Session = Depends(get_db)):
     return db.query(ThucPham).filter(ThucPham.TenThucPham.like(f"%{query}%")).limit(20).all()
 
-# --- AI RECOGNITION (TỰ HỌC) ---
+# --- AI RECOGNITION (NÂNG CẤP PERSONA & TỰ HỌC) ---
 @app.post("/analyze/")
 def analyze_image(payload: ImagePayload, db: Session = Depends(get_db)):
-    print("🚀 Đang phân tích ảnh với Gemini 2.5 Flash...")
+    print(f"🚀 Đang phân tích ảnh cho User ID: {payload.user_id}...")
     try:
+        # Lấy thông tin dị ứng của User
+        user = db.query(User).filter(User.id == payload.user_id).first()
+        allergies = user.allergies if user and user.allergies else "Không có"
+
         clean_base64 = payload.image_base64.split(",")[1] if "," in payload.image_base64 else payload.image_base64
         image_data = base64.b64decode(clean_base64)
         
-        prompt = """
-        Bạn là chuyên gia dinh dưỡng. Nhìn ảnh và trả về JSON:
-        {
-            "ten_mon": "Tên món ăn tiếng Việt",
-            "don_vi": "đơn vị (bát/dĩa/cái)",
-            "calo": số_calo_ước_tính (float),
+        # PROMPT NÂNG CẤP: Yêu cầu check dị ứng cực gắt
+        prompt = f"""
+        Bạn là chuyên gia dinh dưỡng và an toàn thực phẩm.
+        Người dùng này bị DỊ ỨNG: {allergies}.
+        
+        Hãy nhìn kỹ món ăn trong ảnh và trả về JSON:
+        {{
+            "ten_mon": "Tên món tiếng Việt",
+            "don_vi": "dĩa/tô/cái",
+            "calo": số_calo_ước_tính (int),
             "dam": số_protein (float),
             "duong_bot": số_carb (float),
             "beo": số_fat (float),
             "xo": số_xơ (float),
-            "vitamin": "các loại vitamin"
-        }
-        Chỉ trả về JSON, không giải thích.
+            "vitamin": "tên các vitamin",
+            "message": "Lời nhận xét.",
+            "warning": "CẢNH BÁO NGUY HIỂM nếu món này chứa thành phần dị ứng ({allergies}). Nếu an toàn, để trống."
+        }}
+        
+        LƯU Ý: Nếu thấy thành phần dị ứng (ví dụ: đậu phộng, tôm...), hãy viết cảnh báo in hoa vào trường 'warning'.
         """
+        
         response = model.generate_content([{'mime_type': 'image/jpeg', 'data': image_data}, prompt])
         ai_data = json.loads(response.text)
-        print(f"🤖 AI thấy: {ai_data['ten_mon']}")
+        
+        # Log để kiểm tra
+        if ai_data.get("warning"):
+            print(f"⚠️ CẢNH BÁO DỊ ỨNG: {ai_data['warning']}")
 
-        # Kiểm tra DB
-        existing = db.query(ThucPham).filter(ThucPham.TenThucPham.like(f"%{ai_data['ten_mon']}%")).first()
-        if existing:
-            return {
-                "success": True, "food_name": existing.TenThucPham, "unit": existing.DonVi,
-                "calories": existing.Calories, "macros": {"protein": existing.Protein, "carbs": existing.Carbs, "fat": existing.ChatBeo},
-                "micros": {"fiber": existing.ChatXo, "vitamin": existing.Vitamin},
-                "message": "Tìm thấy trong DB."
-            }
-        else:
-            # Tự học (Lưu món mới)
-            print("🆕 Món mới -> Đang học vào DB...")
-            new_id = f"AI_{int(datetime.datetime.now().timestamp())}"
-            new_food = ThucPham(
-                MaThucPham=new_id, TenThucPham=ai_data['ten_mon'], DonVi=ai_data['don_vi'],
-                Calories=ai_data['calo'], Protein=ai_data['dam'], Carbs=ai_data['duong_bot'],
-                ChatBeo=ai_data['beo'], ChatXo=ai_data['xo'], Vitamin=ai_data['vitamin']
-            )
-            db.add(new_food); db.commit()
-            return {
-                "success": True, "food_name": ai_data['ten_mon'], "unit": ai_data['don_vi'],
-                "calories": ai_data['calo'], "macros": {"protein": ai_data['dam'], "carbs": ai_data['duong_bot'], "fat": ai_data['beo']},
-                "micros": {"fiber": ai_data['xo'], "vitamin": ai_data['vitamin']},
-                "message": "AI đã học món mới!"
-            }
+        return {
+            "success": True, 
+            "food_name": ai_data['ten_mon'], 
+            "unit": ai_data['don_vi'],
+            "calories": ai_data['calo'], 
+            "macros": {"protein": ai_data['dam'], "carbs": ai_data['duong_bot'], "fat": ai_data['beo']},
+            "micros": {"fiber": ai_data['xo'], "vitamin": ai_data['vitamin']},
+            "message": ai_data['message'],
+            "warning": ai_data.get("warning", "") # Trả về cảnh báo cho Frontend
+        }
     except Exception as e:
         print("Lỗi:", e)
-        return {"success": False, "food_name": "Không rõ", "message": "Ảnh mờ hoặc lỗi kết nối"}
-
+        return {"success": False, "food_name": "Không rõ", "message": "Lỗi phân tích", "warning": ""}
+    
+    
+    
 # --- MEALS & REPORT ---
 @app.post("/meals/")
 def add_meal(m: MealCreate, db: Session = Depends(get_db)):
+    # Lưu bữa ăn vào lịch sử
     db.add(Meal(**m.dict(), date=datetime.date.today())); db.commit()
     return {"message": "Saved"}
 
@@ -265,9 +302,16 @@ def get_daily_report(user_id: int, db: Session = Depends(get_db)):
     meals = db.query(Meal).filter(Meal.user_id == user_id, Meal.date == datetime.date.today()).all()
     user = db.query(User).filter(User.id == user_id).first()
     total = sum(m.calories for m in meals)
-    return {"total_calories": total, "target_calories": user.target_calories if user else 2000, 
-            "macros": {"protein": sum(m.protein for m in meals), "carbs": sum(m.carbs for m in meals), "fat": sum(m.fat for m in meals)}, 
-            "status": "Vượt" if total > (user.target_calories if user else 2000) else "An toàn"}
+    return {
+        "total_calories": total, 
+        "target_calories": user.target_calories if user else 2000, 
+        "macros": {
+            "protein": sum(m.protein for m in meals), 
+            "carbs": sum(m.carbs for m in meals), 
+            "fat": sum(m.fat for m in meals)
+        }, 
+        "status": "Vượt" if total > (user.target_calories if user else 2000) else "An toàn"
+    }
 
 @app.get("/report/history/{user_id}")
 def get_historical_report(user_id: int, start_date: str, end_date: str, db: Session = Depends(get_db)):
@@ -289,14 +333,23 @@ def get_historical_report(user_id: int, start_date: str, end_date: str, db: Sess
 
 @app.post("/analyze/report/{user_id}")
 def ai_analyze_report(rd: ReportData):
-    # Dùng model text thường (không json) để nó chém gió tự nhiên
-    text_model = genai.GenerativeModel('gemini-2.0-flash-lite') 
-    data_str = "\n".join([f"{i['date']}: {int(i['totals']['calories'])}/{i['target']} kcal" for i in rd.data_summary])
-    prompt = f"Phân tích dinh dưỡng cho {rd.user_name}:\n{data_str}\nCho 3 đoạn: Đánh giá, Gợi ý, Nhắc nhở."
-    try: return {"analysis": text_model.generate_content(prompt).text}
-    except: return {"analysis": "Lỗi AI phân tích."}
+    prompt = f"Phân tích dinh dưỡng cho {rd.user_name}:\n{rd.data_summary}\nCho 3 đoạn ngắn gọn: Đánh giá, Gợi ý, Nhắc nhở."
+    try: return {"analysis": chat_model.generate_content(prompt).text}
+    except: return {"analysis": "AI đang bận."}
 
-# --- COMMUNITY & ADMIN ---
+# --- CHATBOT ---
+@app.post("/chat")
+def chat_with_ai(req: ChatRequest):
+    try:
+        # Prompt hệ thống cho Chatbot
+        system_instruction = "Bạn là trợ lý dinh dưỡng tên là FitBot. Hãy trả lời ngắn gọn, vui vẻ và tập trung vào sức khỏe."
+        full_prompt = f"{system_instruction}\nContext: {req.context}\nUser: {req.message}\nFitBot:"
+        response = chat_model.generate_content(full_prompt)
+        return {"reply": response.text}
+    except Exception as e:
+        return {"reply": "Xin lỗi, mình đang mất kết nối."}
+
+# --- COMMUNITY ---
 @app.post("/community/posts/")
 def create_post(p: PostCreate, db: Session = Depends(get_db)):
     new_post = Post(user_name=p.user_name, content=p.content, avatar=p.avatar, likes=0, image_url="")
@@ -325,17 +378,24 @@ def send_feedback(fb: FeedbackCreate, db: Session = Depends(get_db)):
 def get_feedbacks(db: Session = Depends(get_db)):
     return db.query(Feedback).order_by(Feedback.created_at.desc()).all()
 
-@app.post("/chat")
-def chat_with_ai(req: ChatRequest):
-    try:
-        # Dùng model text nhẹ và nhanh cho chat
-        chat_model = genai.GenerativeModel('gemini-2.0-flash-lite') 
-        
-        # Gửi context (thông tin user) + tin nhắn mới
-        full_prompt = f"{req.context}\n\nUser: {req.message}\nAI:"
-        
-        response = chat_model.generate_content(full_prompt)
-        return {"reply": response.text}
-    except Exception as e:
-        print("Lỗi Chat:", e)
-        return {"reply": "Xin lỗi, server đang bận. Bạn thử lại sau nhé!"}
+@app.get("/admin/pending-foods")
+def get_pending_foods(db: Session = Depends(get_db)):
+    return db.query(ThucPham).filter(ThucPham.is_verified == False).all()
+
+@app.post("/admin/approve-food/{food_id}")
+def approve_food(food_id: str, db: Session = Depends(get_db)):
+    food = db.query(ThucPham).filter(ThucPham.MaThucPham == food_id).first()
+    if food:
+        food.is_verified = True
+        db.commit()
+        return {"message": "Đã duyệt món ăn!"}
+    raise HTTPException(404, "Không tìm thấy món")
+
+@app.delete("/admin/delete-food/{food_id}")
+def delete_food(food_id: str, db: Session = Depends(get_db)):
+    food = db.query(ThucPham).filter(ThucPham.MaThucPham == food_id).first()
+    if food:
+        db.delete(food)
+        db.commit()
+        return {"message": "Đã xóa món rác!"}
+    raise HTTPException(404, "Không tìm thấy món")

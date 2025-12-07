@@ -16,7 +16,7 @@ export default function HomeScreen() {
   const userId = useUserStore(s => s.profile.id);
   const fullName = useUserStore(s => s.profile.fullName);
   const profileGoal = useUserStore(s => s.profile.goals?.dailyCalories);
-
+  const { streak } = useUserStore();
   const [eaten, setEaten] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 });
   const [waterCount, setWaterCount] = useState(0);
   
@@ -70,15 +70,24 @@ export default function HomeScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         
         {/* HEADER CHÀO MỪNG */}
-        <View style={styles.header}>
-            <View>
-                <Text style={styles.date}>{new Date().toLocaleDateString('vi-VN', {weekday: 'long', day:'numeric', month:'long'})}</Text>
-                <Text style={styles.greeting}>Hi, {fullName?.split(' ').pop() || 'Bạn'} 👋</Text>
+      <View style={styles.header}>
+        <View>
+            <Text style={styles.date}>{new Date().toLocaleDateString('vi-VN', {weekday: 'long', day:'numeric', month:'long'})}</Text>
+            <Text style={styles.greeting}>Hi, {fullName?.split(' ').pop() || 'Bạn'} 👋</Text>
+        </View>
+        
+        <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
+            {/* 🔥 STREAK BADGE MỚI */}
+            <View style={{flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF0E6', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20}}>
+                <Ionicons name="flame" size={20} color="#FF5722" />
+                <Text style={{fontWeight: '800', color: '#FF5722', marginLeft: 4}}>{streak}</Text>
             </View>
+
             <TouchableOpacity style={styles.avatarBtn} onPress={() => handlePress('/profile')}>
                 <Ionicons name="person" size={20} color="#fff" />
             </TouchableOpacity>
         </View>
+    </View>
 
         {/* CARD TỔNG QUAN (HERO CARD) */}
         <LinearGradient
@@ -119,6 +128,7 @@ export default function HomeScreen() {
             <QuickAction icon="restaurant" color="#00CEC9" title="Thực đơn" onPress={() => handlePress('/(drawer)/(tabs)/Recipes')} />
             <QuickAction icon="stats-chart" color="#FD79A8" title="Báo cáo" onPress={() => handlePress('/reports')} />
             <QuickAction icon="chatbubbles" color="#FDCB6E" title="Trợ lý" onPress={() => handlePress('/chatbot')} />
+            <QuickAction icon="barcode-outline" color="#2D3436" title="Quét Mã" onPress={() => router.push('/barcode-scan')} />
         </View>
 
         {/* WATER TRACKER (Giao diện mới) */}

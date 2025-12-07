@@ -1,6 +1,7 @@
 import { API_URL } from '@/src/constants/ApiConfig'; // Import địa chỉ IP
 import { AuthService } from '@/src/services/api';
 import { useUserStore } from '@/src/store/userStore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from "react";
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -40,7 +41,7 @@ export default function LoginScreen() {
   // ------------------------------------
 
   const handleLogin = async() => {
- if (!email || !password) {
+    if (!email || !password) {
       Alert.alert('Lỗi', 'Vui lòng nhập đủ thông tin');
       return;
     }
@@ -54,11 +55,19 @@ export default function LoginScreen() {
         useUserStore.getState().setProfile({ 
             id: res.user_id, // <--- QUAN TRỌNG: Lưu ID thật từ DB
             fullName: res.full_name,
-            goals: { dailyCalories: res.target_calories }
+            goals: { dailyCalories: res.target_calories },
+            isAdmin: res.is_admin
         });
+        await AsyncStorage.setItem('isLoggedIn', 'true');
+        if (res.is_admin) {
+            Alert.alert('Xin chào Sếp!', 'Đang vào trang quản trị...');
+            router.replace('/admin/dashboard'); // Vào Admin
+        } else {
+            Alert.alert('Thành công', `Chào mừng ${res.full_name}!`);
+            router.replace('/'); // Vào trang chủ khách hàng
+        }
 
-        Alert.alert('Thành công', `Chào mừng ${res.full_name}!`);
-        router.replace('/'); 
+
     } else {
         Alert.alert('Thất bại', res?.detail || 'Sai email hoặc mật khẩu');
     }

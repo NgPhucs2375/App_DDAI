@@ -8,20 +8,27 @@ interface UserState {
   token: string | null;
   isDarkMode: boolean;
   profile: UserProfile;
+  streak: number;           // Số ngày liên tiếp
+  lastLogDate: string | null; // Ngày ghi nhật ký gần nhất (YYYY-MM-DD)
+
+  // Actions
   setLogin: (status: boolean, token?: string | null) => void;
   setProfile: (newProfile: Partial<UserProfile>) => void;
   setTheme: (isDark: boolean) => void;
-  calculateTDEE: () => void; // Hàm mới
-  clearStore: () => void;
+  calculateTDEE: () => void;
+  logout: () => void;
+  updateStreak: () => void; // Hàm cập nhật streak
 }
 
 const DEFAULT_PROFILE: UserProfile = {
-  id: 'guest',
+  id: '',
+  email: '',
   fullName: 'Người dùng mới',
   age: 25,
   gender: 'Nam',
   heightCm: 170,
   weightKg: 65,
+  activityLevel: 'Vừa',
   allergies: [],
   goals: { dailyCalories: 2000, targetWeightKg: 65 },
 };
@@ -33,8 +40,10 @@ export const useUserStore = create<UserState>()(
       token: null,
       isDarkMode: false,
       profile: DEFAULT_PROFILE,
+      streak: 0,
+      lastLogDate: null,
 
-      setLogin: (status: boolean, token: string | null = null) => set({ isLoggedIn: status, token }),
+      setLogin: (status, token = null) => set({ isLoggedIn: status, token }),
 
       setTheme: (isDark) => set({ isDarkMode: isDark }),
 
@@ -42,31 +51,33 @@ export const useUserStore = create<UserState>()(
         set((state) => ({
           profile: { ...state.profile, ...newProfile },
         }));
-        // Tự động tính lại TDEE mỗi khi cập nhật profile
         get().calculateTDEE();
       },
 
-      // LOGIC KHOA HỌC: Công thức Mifflin-St Jeor
       calculateTDEE: () => {
         const p = get().profile;
         if (!p.weightKg || !p.heightCm || !p.age) return;
 
-        // 1. Tính BMR (Basal Metabolic Rate)
+        // Mifflin-St Jeor Equation
         let bmr = 10 * p.weightKg + 6.25 * p.heightCm - 5 * p.age;
         bmr += p.gender === 'Nam' ? 5 : -161;
 
-        // 2. Tính TDEE (Giả sử vận động nhẹ x1.375)
-        const tdee = Math.round(bmr * 1.375);
+        let pal = 1.2;
+        if (p.activityLevel === 'Nhẹ') pal = 1.375;
+        else if (p.activityLevel === 'Vừa') pal = 1.55;
+        else if (p.activityLevel === 'Nặng') pal = 1.725;
 
-        // 3. Điều chỉnh theo mục tiêu (Giảm cân thì trừ 500kcal)
+        const tdee = Math.round(bmr * pal);
+
         let targetCal = tdee;
-        if (p.goals?.targetWeightKg && p.goals.targetWeightKg < p.weightKg) {
-            targetCal -= 500; // Thâm hụt calo để giảm cân
-        } else if (p.goals?.targetWeightKg && p.goals.targetWeightKg > p.weightKg) {
-            targetCal += 500; // Dư thừa calo để tăng cân
+        const targetWeight = p.goals?.targetWeightKg || p.weightKg;
+
+        if (targetWeight < p.weightKg) {
+            targetCal -= 500;
+        } else if (targetWeight > p.weightKg) {
+            targetCal += 300;
         }
 
-        // Cập nhật lại Goal trong Store
         set((state) => ({
             profile: {
                 ...state.profile,
@@ -75,7 +86,31 @@ export const useUserStore = create<UserState>()(
         }));
       },
 
-      clearStore: () => set({ isLoggedIn: false, token: null, profile: DEFAULT_PROFILE }),
+      // --- LOGIC STREAK (CHUỖI NGÀY) ---
+      updateStreak: () => {
+        const today = new Date().toISOString().split('T')[0]; // Lấy ngày hiện tại YYYY-MM-DD
+        const { lastLogDate, streak } = get();
+
+        // Nếu hôm nay đã log rồi thì không làm gì cả
+        if (lastLogDate === today) return;
+
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+        if (lastLogDate === yesterdayStr) {
+            // Nếu lần cuối log là hôm qua -> Tăng streak
+            set({ streak: streak + 1, lastLogDate: today });
+        } else {
+            // Nếu bị ngắt quãng (hoặc lần đầu tiên) -> Reset về 1
+            set({ streak: 1, lastLogDate: today });
+        }
+      },
+
+      logout: () => {
+        set({ isLoggedIn: false, token: null, profile: DEFAULT_PROFILE, streak: 0, lastLogDate: null });
+        AsyncStorage.removeItem('isLoggedIn');
+      },
     }),
     {
       name: 'user-storage',
@@ -84,6 +119,8 @@ export const useUserStore = create<UserState>()(
         isLoggedIn: state.isLoggedIn,
         profile: state.profile,
         isDarkMode: state.isDarkMode,
+        streak: state.streak,       // Lưu streak xuống máy
+        lastLogDate: state.lastLogDate, // Lưu ngày log cuối
       }),
     }
   )

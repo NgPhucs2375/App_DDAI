@@ -12,7 +12,7 @@ type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 export default function MealLogTab() {
     const router = useRouter();
     const userId = useUserStore(s => s.profile.id);
-
+    const { updateStreak } = useUserStore();
     const [mealType, setMealType] = useState<MealType>('breakfast');
     
     // State cho tìm kiếm
@@ -113,6 +113,7 @@ export default function MealLogTab() {
         });
 
         if (result) {
+            updateStreak();
             Alert.alert('Thành công', 'Đã lưu bữa ăn!', [
                 { text: 'Xem lịch sử', onPress: () => router.replace('/(drawer)/(tabs)/MealHistory') },
                 { text: 'Nhập tiếp', style: 'cancel', onPress: clearSelection }

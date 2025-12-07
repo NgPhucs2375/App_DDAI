@@ -19,8 +19,10 @@ export interface UserProfile {
   heightCm?: number;
   weightKg?: number;
   gender?: Gender;
+  activityLevel?: string;
   allergies: string[];
   goals?: UserGoals;
+  isAdmin?: boolean;
   updatedAt?: string;
   createdAt?: string;
 }
