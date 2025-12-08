@@ -424,3 +424,55 @@ def startup_event():
         print(f"❌ Lỗi khởi tạo Admin: {e}")
     finally:
         db.close()
+        
+        
+# --- API TẠO DỮ LIỆU GIẢ CHO ADMIN (TESTING ONLY) ---
+@app.get("/admin/generate-fake-data")
+def generate_fake_data(db: Session = Depends(get_db)):
+    import random
+    import time
+    
+    print("😈 Đang tạo dữ liệu giả để Admin có việc làm...")
+
+    # 1. Tạo 5 món ăn "lạ" ở trạng thái CHỜ DUYỆT (is_verified=False)
+    fake_foods = [
+        ("Bánh tráng trộn vỉa hè", 350),
+        ("Trà chanh giã tay", 120),
+        ("Nem nướng Nha Trang", 450),
+        ("Bún đậu mắm tôm full", 700),
+        ("Xoài lắc muối ớt", 150)
+    ]
+    
+    count_food = 0
+    for name, cal in fake_foods:
+        # Tạo ID ngẫu nhiên
+        new_id = f"PENDING_{int(time.time())}_{random.randint(100,999)}"
+        # Kiểm tra nếu chưa có thì thêm
+        if not db.query(ThucPham).filter(ThucPham.TenThucPham == name).first():
+            db.add(ThucPham(
+                MaThucPham=new_id, 
+                TenThucPham=name, 
+                DonVi="phần", 
+                Calories=cal, 
+                Protein=5.0, Carbs=10.0, ChatBeo=5.0, ChatXo=1.0, Vitamin="Không rõ",
+                is_verified=False # <--- QUAN TRỌNG: Để Admin thấy và duyệt
+            ))
+            count_food += 1
+
+    # 2. Tạo 3 Feedback giả
+    fake_feedbacks = [
+        ("App xịn quá ad ơi! Nhưng cần thêm Dark Mode.", "user_cute"),
+        ("Sao tính năng Camera lúc nhanh lúc chậm vậy?", "angry_user"),
+        ("Thêm thực đơn món chay đi shop.", "vegan_lover")
+    ]
+    
+    count_fb = 0
+    for content, user in fake_feedbacks:
+        db.add(Feedback(user_id=random.randint(1,100), user_name=user, content=content))
+        count_fb += 1
+
+    db.commit()
+    return {
+        "message": f"✅ Đã bơm xong: {count_food} món chờ duyệt + {count_fb} góp ý.",
+        "hint": "Hãy vào Admin Dashboard và reload lại để thấy kết quả!"
+    }
