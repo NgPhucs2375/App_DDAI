@@ -3,10 +3,10 @@ import { MealService } from '@/src/services/api';
 import { useUserStore } from '@/src/store/userStore';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient'; // Cần cài thêm: npx expo install expo-linear-gradient
+import { LinearGradient } from 'expo-linear-gradient';
 import { Href, useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Animated, Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { PieChart } from 'react-native-chart-kit';
 
 const { width } = Dimensions.get('window');
@@ -20,7 +20,6 @@ export default function HomeScreen() {
   const [eaten, setEaten] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 });
   const [waterCount, setWaterCount] = useState(0);
   
-  // Animation Scale cho nút bấm
   const scaleAnim = new Animated.Value(1);
 
   useFocusEffect(
@@ -54,9 +53,26 @@ export default function HomeScreen() {
     { name: 'Béo', population: eaten.fat || 1, color: '#FFE66D', legendFontColor: '#7F7F7F', legendFontSize: 12 },
   ];
 
+  // 👇 ĐÃ SỬA: Logic uống nước có hiệu ứng chúc mừng
   const handleAddWater = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setWaterCount(prev => (prev < 8 ? prev + 1 : 0));
+    setWaterCount(prev => {
+        const newValue = prev < 8 ? prev + 1 : 0;
+        
+        // Nếu vừa đủ 8 ly (2000ml)
+        if (newValue === 8) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); // Rung mạnh
+            Alert.alert(
+                "Tuyệt vời! 🎉", 
+                "Bạn đã uống đủ 2000ml nước hôm nay. Cơ thể cảm ơn bạn rất nhiều! 💧",
+                [{ text: "OK, tôi sẽ giữ phong độ" }]
+            );
+        } else if (newValue > 0) {
+            // Rung nhẹ mỗi lần bấm
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
+        
+        return newValue;
+    });
   };
 
   const handlePress = (route: string) => {

@@ -33,13 +33,20 @@ export const AuthService = {
 export const MealService = {
    add: (data: { user_id: number; mealType: string; items: string; calories: number; protein?: number; carbs?: number; fat?: number }) => 
     post('/meals/', data),
-  
+
    getDailyReport: (user_id: number) => get(`/report/daily/${user_id}`),
   
    getHistory: (user_id: number) => get(`/meals/history/${user_id}`),
 
    getHistoricalReport: (user_id: number, start_date: string, end_date: string) => 
     get(`/report/history/${user_id}?start_date=${start_date}&end_date=${end_date}`),
+
+      delete: (mealId: number) => {
+    return fetch(`${API_URL}/meals/${mealId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+    }).then(res => res.ok).catch(() => false);
+  },
 };
 
 export const AIService = {

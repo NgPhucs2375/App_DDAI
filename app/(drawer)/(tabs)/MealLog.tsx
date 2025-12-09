@@ -17,7 +17,6 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    TouchableWithoutFeedback,
     View
 } from 'react-native';
 
@@ -48,7 +47,7 @@ export default function MealLogTab() {
     const [mealType, setMealType] = useState<MealType>('breakfast');
     const [query, setQuery] = useState('');
     const [suggestions, setSuggestions] = useState<any[]>([]);
-    const [recentFoods, setRecentFoods] = useState<any[]>([]); // Món hay ăn
+    const [recentFoods, setRecentFoods] = useState<any[]>([]); 
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [isSearching, setIsSearching] = useState(false);
     
@@ -85,10 +84,7 @@ export default function MealLogTab() {
             if (query.trim().length > 1 && !selectedFood) {
                 setIsSearching(true);
                 try {
-                    console.log("Đang tìm món:", query);
                     const results = await FoodService.search(query);
-                    console.log("Kết quả tìm kiếm:", results); // Debug xem có data không
-                    
                     if (Array.isArray(results) && results.length > 0) {
                         setSuggestions(results);
                         setShowSuggestions(true);
@@ -102,7 +98,6 @@ export default function MealLogTab() {
                 }
             } else if (query.trim().length === 0) {
                 setSuggestions(recentFoods);
-                // setShowSuggestions(true); // Tạm tắt tự hiện khi chưa focus
                 setIsSearching(false);
             }
         }, 400); 
@@ -180,154 +175,161 @@ export default function MealLogTab() {
     };
 
     return (
-        <TouchableWithoutFeedback onPress={() => { setShowSuggestions(false); Keyboard.dismiss(); }}>
-            <View style={styles.container}>
-                <AppHeader />
-                <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-                    
-                    {/* 1. CHỌN BỮA ĂN */}
-                    <View style={styles.mealSelector}>
-                        {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((t) => (
-                            <TouchableOpacity
-                                key={t}
-                                style={[styles.mealTab, mealType === t && styles.mealTabActive]}
-                                onPress={() => { setMealType(t); Haptics.selectionAsync(); }}
-                            >
-                                <Text style={[styles.mealEmoji]}>
-                                    {t === 'breakfast' ? '🍳' : t === 'lunch' ? '🍱' : t === 'dinner' ? '🍲' : '🍿'}
-                                </Text>
-                                <Text style={[styles.mealText, mealType === t && styles.mealTextActive]}>
-                                    {t === 'breakfast' ? 'Sáng' : t === 'lunch' ? 'Trưa' : t === 'dinner' ? 'Tối' : 'Vặt'}
-                                </Text>
+        // 👇 ĐÃ BỎ TouchableWithoutFeedback Ở NGOÀI CÙNG -> KHẮC PHỤC LỖI SCROLL
+        <View style={styles.container}>
+            <AppHeader />
+            <ScrollView 
+                contentContainerStyle={styles.content} 
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag" // 👇 Vuốt màn hình sẽ tắt bàn phím
+                onScrollBeginDrag={() => {
+                    setShowSuggestions(false); // 👇 Vuốt màn hình sẽ tắt gợi ý
+                    Keyboard.dismiss();
+                }}
+            >
+                
+                {/* 1. CHỌN BỮA ĂN */}
+                <View style={styles.mealSelector}>
+                    {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((t) => (
+                        <TouchableOpacity
+                            key={t}
+                            style={[styles.mealTab, mealType === t && styles.mealTabActive]}
+                            onPress={() => { setMealType(t); Haptics.selectionAsync(); }}
+                        >
+                            <Text style={[styles.mealEmoji]}>
+                                {t === 'breakfast' ? '🍳' : t === 'lunch' ? '🍱' : t === 'dinner' ? '🍲' : '🍿'}
+                            </Text>
+                            <Text style={[styles.mealText, mealType === t && styles.mealTextActive]}>
+                                {t === 'breakfast' ? 'Sáng' : t === 'lunch' ? 'Trưa' : t === 'dinner' ? 'Tối' : 'Vặt'}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+
+                <Text style={styles.sectionTitle}>Tìm kiếm món ăn</Text>
+
+                {/* 2. THANH TÌM KIẾM & DANH SÁCH GỢI Ý */}
+                <View style={{ zIndex: 100, marginBottom: 20 }}>
+                    <View style={styles.searchBox}>
+                        <Ionicons name="search" size={20} color={Colors.light.tint} style={{marginRight: 10}} />
+                        <TextInput
+                            placeholder="Gõ tên món (vd: Phở, Cơm...)"
+                            value={query}
+                            onChangeText={(text) => {
+                                setQuery(text);
+                                if(selectedFood) setSelectedFood(null); 
+                            }}
+                            style={styles.searchInput}
+                            onFocus={() => {
+                                if (query.length === 0 && recentFoods.length > 0) {
+                                    setSuggestions(recentFoods);
+                                    setShowSuggestions(true);
+                                }
+                            }}
+                        />
+                        {isSearching ? <ActivityIndicator size="small" color={Colors.light.tint} /> : 
+                         query.length > 0 && (
+                            <TouchableOpacity onPress={() => { setQuery(''); setSelectedFood(null); }}>
+                                <Ionicons name="close-circle" size={20} color="#ccc" />
                             </TouchableOpacity>
-                        ))}
+                        )}
                     </View>
 
-                    <Text style={styles.sectionTitle}>Tìm kiếm món ăn</Text>
+                    {/* LIST GỢI Ý */}
+                    {showSuggestions && suggestions.length > 0 && (
+                        <View style={styles.dropdown}>
+                            <View style={styles.dropdownHeader}>
+                                <Text style={styles.dropdownTitle}>
+                                    {query.length === 0 ? "🕒 Món hay ăn" : "🔎 Kết quả tìm kiếm"}
+                                </Text>
+                            </View>
+                            <ScrollView 
+                                style={{maxHeight: 220}} 
+                                nestedScrollEnabled={true} 
+                                keyboardShouldPersistTaps="handled"
+                            >
+                                {suggestions.map((item, index) => (
+                                    <TouchableOpacity 
+                                        key={item.MaThucPham || index} 
+                                        style={styles.suggestItem} 
+                                        onPress={() => handleSelectFood(item)}
+                                    >
+                                        <View style={styles.suggestInfo}>
+                                            <Text style={styles.suggestName}>{item.TenThucPham}</Text>
+                                            <Text style={styles.suggestCalo}>
+                                                {item.Calories} kcal <Text style={{color:'#999'}}>/ {item.DonVi}</Text>
+                                            </Text>
+                                        </View>
+                                        <Ionicons name="add-circle" size={24} color={Colors.light.tint} />
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        </View>
+                    )}
+                    
+                    {showSuggestions && suggestions.length === 0 && query.length > 1 && !isSearching && (
+                         <View style={styles.dropdown}>
+                            <Text style={{padding:15, textAlign:'center', color:'#999'}}>Không tìm thấy món này</Text>
+                         </View>
+                    )}
+                </View>
 
-                    {/* 2. THANH TÌM KIẾM & DANH SÁCH GỢI Ý */}
-                    <View style={{ zIndex: 100, marginBottom: 20 }}>
-                        <View style={styles.searchBox}>
-                            <Ionicons name="search" size={20} color={Colors.light.tint} style={{marginRight: 10}} />
-                            <TextInput
-                                placeholder="Gõ tên món (vd: Phở, Cơm...)"
-                                value={query}
-                                onChangeText={(text) => {
-                                    setQuery(text);
-                                    if(selectedFood) setSelectedFood(null); 
-                                }}
-                                style={styles.searchInput}
-                                onFocus={() => {
-                                    if (query.length === 0 && recentFoods.length > 0) {
-                                        setSuggestions(recentFoods);
-                                        setShowSuggestions(true);
-                                    }
-                                }}
-                            />
-                            {isSearching ? <ActivityIndicator size="small" color={Colors.light.tint} /> : 
-                             query.length > 0 && (
-                                <TouchableOpacity onPress={() => { setQuery(''); setSelectedFood(null); }}>
-                                    <Ionicons name="close-circle" size={20} color="#ccc" />
-                                </TouchableOpacity>
-                            )}
+                {/* 3. CARD DINH DƯỠNG */}
+                {selectedFood && (
+                    <Animated.View style={styles.nutritionCard}>
+                        <View style={styles.cardHeader}>
+                            <Text style={styles.cardTitle}>{selectedFood.TenThucPham}</Text>
+                            <View style={styles.caloBadge}>
+                                <Text style={styles.caloNum}>{currentCalories}</Text>
+                                <Text style={styles.caloUnit}>kcal</Text>
+                            </View>
                         </View>
 
-                        {/* LIST GỢI Ý (ĐÃ SỬA LỖI: Dùng ScrollView thay vì FlatList) */}
-                        {showSuggestions && suggestions.length > 0 && (
-                            <View style={styles.dropdown}>
-                                <View style={styles.dropdownHeader}>
-                                    <Text style={styles.dropdownTitle}>
-                                        {query.length === 0 ? "🕒 Món hay ăn" : "🔎 Kết quả tìm kiếm"}
-                                    </Text>
-                                </View>
-                                <ScrollView 
-                                    style={{maxHeight: 220}} 
-                                    nestedScrollEnabled={true} 
-                                    keyboardShouldPersistTaps="handled"
-                                >
-                                    {suggestions.map((item, index) => (
-                                        <TouchableOpacity 
-                                            key={item.MaThucPham || index} 
-                                            style={styles.suggestItem} 
-                                            onPress={() => handleSelectFood(item)}
-                                        >
-                                            <View style={styles.suggestInfo}>
-                                                <Text style={styles.suggestName}>{item.TenThucPham}</Text>
-                                                <Text style={styles.suggestCalo}>
-                                                    {item.Calories} kcal <Text style={{color:'#999'}}>/ {item.DonVi}</Text>
-                                                </Text>
-                                            </View>
-                                            <Ionicons name="add-circle" size={24} color={Colors.light.tint} />
-                                        </TouchableOpacity>
-                                    ))}
-                                </ScrollView>
+                        <View style={styles.qtyContainer}>
+                            <Text style={{color: '#666', marginBottom: 5}}>Số lượng ({selectedFood.DonVi}):</Text>
+                            <View style={styles.qtyControl}>
+                                <TouchableOpacity onPress={() => changeQuantity(-0.5)} style={styles.qtyBtn}>
+                                    <Ionicons name="remove" size={20} color="#fff" />
+                                </TouchableOpacity>
+                                <TextInput
+                                    value={quantity}
+                                    onChangeText={setQuantity}
+                                    keyboardType="numeric"
+                                    style={styles.qtyInput}
+                                />
+                                <TouchableOpacity onPress={() => changeQuantity(0.5)} style={styles.qtyBtn}>
+                                    <Ionicons name="add" size={20} color="#fff" />
+                                </TouchableOpacity>
                             </View>
-                        )}
-                        
-                        {showSuggestions && suggestions.length === 0 && query.length > 1 && !isSearching && (
-                             <View style={styles.dropdown}>
-                                <Text style={{padding:15, textAlign:'center', color:'#999'}}>Không tìm thấy món này trong dữ liệu</Text>
-                             </View>
-                        )}
-                    </View>
+                        </View>
 
-                    {/* 3. CARD DINH DƯỠNG */}
-                    {selectedFood && (
-                        <Animated.View style={styles.nutritionCard}>
-                            <View style={styles.cardHeader}>
-                                <Text style={styles.cardTitle}>{selectedFood.TenThucPham}</Text>
-                                <View style={styles.caloBadge}>
-                                    <Text style={styles.caloNum}>{currentCalories}</Text>
-                                    <Text style={styles.caloUnit}>kcal</Text>
-                                </View>
-                            </View>
+                        <View style={styles.divider} />
 
-                            <View style={styles.qtyContainer}>
-                                <Text style={{color: '#666', marginBottom: 5}}>Số lượng ({selectedFood.DonVi}):</Text>
-                                <View style={styles.qtyControl}>
-                                    <TouchableOpacity onPress={() => changeQuantity(-0.5)} style={styles.qtyBtn}>
-                                        <Ionicons name="remove" size={20} color="#fff" />
-                                    </TouchableOpacity>
-                                    <TextInput
-                                        value={quantity}
-                                        onChangeText={setQuantity}
-                                        keyboardType="numeric"
-                                        style={styles.qtyInput}
-                                    />
-                                    <TouchableOpacity onPress={() => changeQuantity(0.5)} style={styles.qtyBtn}>
-                                        <Ionicons name="add" size={20} color="#fff" />
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
+                        <View style={styles.macroSection}>
+                            <MacroBar label="Đạm (Protein)" value={currentProtein} color="#4ECDC4" />
+                            <MacroBar label="Tinh bột (Carbs)" value={currentCarbs} color="#FF6B6B" />
+                            <MacroBar label="Chất béo (Fat)" value={currentFat} color="#FFE66D" />
+                        </View>
+                    </Animated.View>
+                )}
 
-                            <View style={styles.divider} />
+                <Text style={[styles.sectionTitle, {marginTop: 20}]}>Ghi chú thêm</Text>
+                <TextInput
+                    placeholder="VD: Không hành, ít nước béo..."
+                    value={note}
+                    onChangeText={setNote}
+                    style={styles.noteInput}
+                    multiline
+                />
 
-                            <View style={styles.macroSection}>
-                                <MacroBar label="Đạm (Protein)" value={currentProtein} color="#4ECDC4" />
-                                <MacroBar label="Tinh bột (Carbs)" value={currentCarbs} color="#FF6B6B" />
-                                <MacroBar label="Chất béo (Fat)" value={currentFat} color="#FFE66D" />
-                            </View>
-                        </Animated.View>
-                    )}
+                <TouchableOpacity style={styles.submitBtn} onPress={onSubmit}>
+                    <Text style={styles.submitText}>LƯU VÀO NHẬT KÝ</Text>
+                    <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                </TouchableOpacity>
 
-                    <Text style={[styles.sectionTitle, {marginTop: 20}]}>Ghi chú thêm</Text>
-                    <TextInput
-                        placeholder="VD: Không hành, ít nước béo..."
-                        value={note}
-                        onChangeText={setNote}
-                        style={styles.noteInput}
-                        multiline
-                    />
-
-                    <TouchableOpacity style={styles.submitBtn} onPress={onSubmit}>
-                        <Text style={styles.submitText}>LƯU VÀO NHẬT KÝ</Text>
-                        <Ionicons name="checkmark-circle" size={20} color="#fff" />
-                    </TouchableOpacity>
-
-                    <View style={{height: 100}} /> 
-                </ScrollView>
-            </View>
-        </TouchableWithoutFeedback>
+                <View style={{height: 100}} /> 
+            </ScrollView>
+        </View>
     );
 }
 

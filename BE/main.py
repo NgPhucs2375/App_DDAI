@@ -364,6 +364,18 @@ def get_history(user_id: int, date: str = None, db: Session = Depends(get_db)):
 def get_all_meals_fallback(db: Session = Depends(get_db)):
     return db.query(Meal).order_by(Meal.id.desc()).all()
 
+# --- XÓA BỮA ĂN ---
+@app.delete("/meals/{meal_id}")
+def delete_meal(meal_id: int, db: Session = Depends(get_db)):
+    # Tìm bữa ăn theo ID
+    meal = db.query(Meal).filter(Meal.id == meal_id).first()
+    if not meal:
+        raise HTTPException(status_code=404, detail="Không tìm thấy bữa ăn")
+    
+    db.delete(meal)
+    db.commit()
+    return {"message": "Đã xóa thành công!"}
+
 @app.get("/report/daily/{user_id}")
 def get_daily_report(user_id: int, db: Session = Depends(get_db)):
     meals = db.query(Meal).filter(Meal.user_id == user_id, Meal.date == datetime.date.today()).all()
@@ -575,3 +587,72 @@ def seed_pending_foods(db: Session = Depends(get_db)):
             
     db.commit()
     return {"message": f"😈 Đã thả {count} món lạ vào danh sách chờ duyệt!"}
+
+# --- KHU VỰC CỨU HỘ DỮ LIỆU ---
+
+# 1. API Kiểm tra xem Database có bao nhiêu món
+@app.get("/debug/check-count")
+def check_count(db: Session = Depends(get_db)):
+    count = db.query(ThucPham).count()
+    users = db.query(User).count()
+    return {
+        "status": "OK",
+        "total_foods": count,
+        "total_users": users,
+        "message": "Database TRỐNG RỖNG!" if count == 0 else f"Đang có {count} món ăn."
+    }
+
+# 2. API Bơm dữ liệu khẩn cấp (Chạy là có 50 món ăn ngay)
+@app.get("/debug/seed-force")
+def force_seed(db: Session = Depends(get_db)):
+    # Danh sách 50 món ăn phổ biến nhất Việt Nam
+    foods_data = [
+        ("Cơm trắng", 130, 2.7, 28, 0.3, "chén"),
+        ("Cơm tấm sườn bì chả", 600, 25, 80, 20, "dĩa"),
+        ("Phở bò tái", 350, 22, 50, 8, "tô"),
+        ("Bánh mì thịt", 300, 15, 40, 10, "ổ"),
+        ("Bún bò Huế", 450, 25, 55, 12, "tô"),
+        ("Hủ tiếu Nam Vang", 400, 20, 60, 10, "tô"),
+        ("Bánh cuốn", 300, 10, 50, 8, "dĩa"),
+        ("Xôi mặn", 400, 12, 60, 15, "hộp"),
+        ("Gà rán", 250, 15, 10, 18, "miếng"),
+        ("Pizza (1 miếng)", 280, 12, 30, 10, "miếng"),
+        ("Trà sữa trân châu", 450, 2, 80, 14, "ly"),
+        ("Cà phê sữa đá", 150, 2, 25, 5, "ly"),
+        ("Trứng ốp la", 90, 7, 0.5, 6, "trứng"),
+        ("Thịt kho tàu", 250, 20, 5, 18, "chén nhỏ"),
+        ("Canh chua cá lóc", 100, 15, 5, 3, "chén"),
+        ("Rau muống xào tỏi", 120, 3, 5, 10, "dĩa"),
+        ("Chuối", 90, 1, 23, 0, "trái"),
+        ("Táo", 50, 0, 14, 0, "trái"),
+        ("Sữa chua", 100, 5, 15, 2, "hộp"),
+        ("Bún đậu mắm tôm", 650, 35, 70, 25, "phần"),
+        ("Mì tôm (Mì gói)", 350, 8, 50, 15, "gói"),
+        ("Bánh tráng trộn", 300, 5, 50, 12, "bịch"),
+        ("Gỏi cuốn", 60, 4, 10, 1, "cuốn"),
+        ("Chè thái", 350, 3, 60, 10, "ly"),
+        ("Sinh tố bơ", 250, 3, 20, 18, "ly")
+    ]
+    
+    added_count = 0
+    import time
+    import random
+    
+    for name, cal, pro, carb, fat, unit in foods_data:
+        # Chỉ thêm nếu chưa có
+        if not db.query(ThucPham).filter(ThucPham.TenThucPham == name).first():
+            # Tạo ID ngẫu nhiên để không trùng
+            new_id = f"SEED_{int(time.time())}_{random.randint(1000,9999)}"
+            db.add(ThucPham(
+                MaThucPham=new_id,
+                TenThucPham=name,
+                DonVi=unit,
+                Calories=cal, Protein=pro, Carbs=carb, ChatBeo=fat,
+                ChatXo=2.0, Vitamin="A, B, C",
+                is_verified=True # Đã duyệt luôn
+            ))
+            added_count += 1
+            
+    db.commit()
+    return {"message": f"✅ Đã bơm thành công {added_count} món ăn vào Database!", "total_items": added_count}
+
