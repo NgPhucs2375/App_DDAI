@@ -220,10 +220,77 @@ def update_profile(user_id: int, p: UserUpdate, db: Session = Depends(get_db)):
     return {"new_target_calories": u.target_calories}
 
 # --- FOOD SEARCH ---
+# --- TÌM KIẾM THÔNG MINH (DB + AI FALLBACK) ---
 @app.get("/food/search")
 def search_food(query: str, db: Session = Depends(get_db)):
-    return db.query(ThucPham).filter(ThucPham.TenThucPham.like(f"%{query}%")).limit(20).all()
+    # 1. Tìm trong Database trước (Ưu tiên tốc độ)
+    # Dùng ilike để tìm không phân biệt hoa thường
+    local_results = db.query(ThucPham).filter(ThucPham.TenThucPham.ilike(f"%{query}%")).limit(20).all()
+    
+    if len(local_results) > 0:
+        print(f"✅ Tìm thấy '{query}' trong Database.")
+        return local_results
 
+    # 2. Nếu Database không có -> Hỏi AI (Gemini)
+    print(f"🤖 Không tìm thấy '{query}' trong DB. Đang hỏi AI...")
+    
+    try:
+        # Prompt xin dữ liệu JSON chuẩn
+        prompt = f"""
+        Tôi có món ăn: "{query}".
+        Hãy ước lượng dinh dưỡng cho 1 phần ăn tiêu chuẩn.
+        Trả về JSON thuần túy (không markdown) theo mẫu:
+        {{
+            "ten_mon": "Tên món chuẩn hóa (Tiếng Việt)",
+            "don_vi": "tô/dĩa/cái",
+            "calo": số_nguyên_calo,
+            "protein": số_gam_dam,
+            "carbs": số_gam_duong_bot,
+            "fat": số_gam_beo
+        }}
+        Nếu không phải món ăn, trả về JSON rỗng: {{}}
+        """
+        
+        response = chat_model.generate_content(prompt)
+        import json
+        
+        # Xử lý chuỗi JSON từ AI (đôi khi AI thêm ```json ở đầu)
+        clean_text = response.text.replace("```json", "").replace("```", "").strip()
+        ai_data = json.loads(clean_text)
+        
+        # Nếu AI không biết món đó (trả về rỗng)
+        if not ai_data or "ten_mon" not in ai_data:
+            return []
+
+        # 3. Lưu món mới vào Database (Học tập)
+        import time
+        import random
+        new_id = f"AI_{int(time.time())}_{random.randint(100,999)}"
+        
+        new_food = ThucPham(
+            MaThucPham=new_id,
+            TenThucPham=ai_data['ten_mon'],
+            DonVi=ai_data['don_vi'],
+            Calories=ai_data['calo'],
+            Protein=ai_data['protein'],
+            Carbs=ai_data['carbs'],
+            ChatBeo=ai_data['fat'],
+            ChatXo=1.0, # Mặc định
+            Vitamin="AI Generated",
+            is_verified=False # Đánh dấu là False để Admin biết mà kiểm tra lại sau
+        )
+        
+        db.add(new_food)
+        db.commit()
+        db.refresh(new_food)
+        
+        print(f"🎉 Đã học được món mới: {ai_data['ten_mon']}")
+        return [new_food]
+
+    except Exception as e:
+        print(f"❌ Lỗi AI Search: {e}")
+        return []
+    
 # --- AI RECOGNITION (NÂNG CẤP PERSONA & TỰ HỌC) ---
 @app.post("/analyze/")
 def analyze_image(payload: ImagePayload, db: Session = Depends(get_db)):
@@ -476,3 +543,35 @@ def generate_fake_data(db: Session = Depends(get_db)):
         "message": f"✅ Đã bơm xong: {count_food} món chờ duyệt + {count_fb} góp ý.",
         "hint": "Hãy vào Admin Dashboard và reload lại để thấy kết quả!"
     }
+    
+    # --- API TẠO DATA CHỜ DUYỆT (Dùng để test Admin) ---
+@app.get("/admin/seed-pending")
+def seed_pending_foods(db: Session = Depends(get_db)):
+    # Danh sách món "lạ" chưa có trong hệ thống
+    junk_foods = [
+        ("Snack Khoai Tây Cay", 100, 540, 5.0, 55.0, 33.0),
+        ("Bánh Tráng Tắc 10k", 1, 300, 2.0, 60.0, 5.0),
+        ("Nước Ngọt Có Ga X", 330, 140, 0.0, 35.0, 0.0),
+        ("Trà Sữa Full Topping", 1, 600, 5.0, 80.0, 20.0),
+        ("Kẹo Dẻo Hình Gấu", 100, 350, 0.0, 85.0, 0.0),
+    ]
+    
+    count = 0
+    import random
+    import time
+    
+    for name, unit, cal, pro, carb, fat in junk_foods:
+        # Kiểm tra nếu chưa có thì thêm
+        if not db.query(ThucPham).filter(ThucPham.TenThucPham == name).first():
+            new_id = f"PENDING_{int(time.time())}_{random.randint(100,999)}"
+            db.add(ThucPham(
+                MaThucPham=new_id,
+                TenThucPham=name,
+                DonVi="gói/ly",
+                Calories=cal, Protein=pro, Carbs=carb, ChatBeo=fat,
+                is_verified=False  # <--- QUAN TRỌNG: False để Admin thấy
+            ))
+            count += 1
+            
+    db.commit()
+    return {"message": f"😈 Đã thả {count} món lạ vào danh sách chờ duyệt!"}
