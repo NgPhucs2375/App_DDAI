@@ -417,18 +417,60 @@ def ai_analyze_report(rd: ReportData):
     except: return {"analysis": "AI đang bận."}
 
 # --- CHATBOT ---
+# --- CHATBOT THÔNG MINH (BIẾT USER ĂN GÌ) ---
+class ChatRequest(BaseModel):
+    user_id: int
+    message: str
+
 @app.post("/chat")
-def chat_with_ai(req: ChatRequest):
+def chat_with_ai(req: ChatRequest, db: Session = Depends(get_db)):
     try:
-        # Prompt hệ thống cho Chatbot
-        system_instruction = "Bạn là trợ lý dinh dưỡng tên là FitBot. Hãy trả lời ngắn gọn, vui vẻ và tập trung vào sức khỏe."
-        full_prompt = f"{system_instruction}\nContext: {req.context}\nUser: {req.message}\nFitBot:"
+        # 1. Lấy hồ sơ User
+        user = db.query(User).filter(User.id == req.user_id).first()
+        if not user:
+            return {"reply": "Mình cần biết bạn là ai để tư vấn. Hãy đăng nhập nhé!"}
+
+        # 2. Lấy lịch sử ăn uống HÔM NAY
+        today = datetime.date.today()
+        meals = db.query(Meal).filter(Meal.user_id == req.user_id, Meal.date == today).all()
+        
+        total_cal = sum(m.calories for m in meals)
+        total_pro = sum(m.protein for m in meals)
+        menu_items = ", ".join([m.items for m in meals]) if meals else "Chưa ăn gì"
+        
+        remaining = user.target_calories - total_cal
+
+        # 3. Tạo Prompt ngữ cảnh (Context)
+        system_instruction = f"""
+        ĐÓNG VAI: Bạn là "FitBot" - Trợ lý dinh dưỡng cá nhân chuyên nghiệp và vui tính.
+        
+        THÔNG TIN KHÁCH HÀNG:
+        - Tên: {user.full_name} ({user.gender}, {user.age} tuổi)
+        - Body: {user.height}cm, {user.weight}kg.
+        - Mục tiêu: {user.target_calories} kcal/ngày.
+        
+        TÌNH HÌNH HÔM NAY:
+        - Đã nạp: {total_cal} kcal (Protein: {total_pro}g).
+        - Thực đơn đã ăn: {menu_items}.
+        - Còn được phép ăn: {remaining} kcal.
+        
+        NHIỆM VỤ:
+        Trả lời câu hỏi của khách hàng dựa trên dữ liệu trên.
+        - Nếu khách ăn quá đà -> Nhắc nhở nhẹ nhàng, gợi ý tập luyện.
+        - Nếu khách ăn thiếu -> Gợi ý món ăn phù hợp với số calo còn lại.
+        - Giọng điệu: Thân thiện, ngắn gọn, dùng emoji.
+        """
+        
+        full_prompt = f"{system_instruction}\n\nKhách hỏi: {req.message}\nFitBot trả lời:"
+        
         response = chat_model.generate_content(full_prompt)
         return {"reply": response.text}
+        
     except Exception as e:
-        return {"reply": "Xin lỗi, mình đang mất kết nối."}
-
-# --- COMMUNITY ---
+        print(f"Chat Error: {e}")
+        return {"reply": "Hic, server đang bận xíu. Bạn hỏi lại nha!"}
+    
+    # --- COMMUNITY ---
 @app.post("/community/posts/")
 def create_post(p: PostCreate, db: Session = Depends(get_db)):
     new_post = Post(user_name=p.user_name, content=p.content, avatar=p.avatar, likes=0, image_url="")
@@ -656,3 +698,52 @@ def force_seed(db: Session = Depends(get_db)):
     db.commit()
     return {"message": f"✅ Đã bơm thành công {added_count} món ăn vào Database!", "total_items": added_count}
 
+# --- LẬP KẾ HOẠCH ĂN UỐNG (WEEKLY PLAN) - PHIÊN BẢN FIX LỖI JSON ---
+@app.get("/plan/weekly/{user_id}")
+def generate_weekly_plan(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user: raise HTTPException(404, "User not found")
+    
+    print(f"📅 Đang lập kế hoạch cho User {user_id}...")
+
+    # Prompt xin JSON (Thêm yêu cầu strict hơn)
+    prompt = f"""
+    Hãy tạo thực đơn 7 ngày cho người Việt Nam:
+    - Calo mục tiêu: {user.target_calories} kcal/ngày.
+    - Dị ứng: {user.allergies if user.allergies else "Không"}.
+    - Yêu cầu: Món ăn dân dã, dễ nấu, giá sinh viên.
+    
+    CHỈ TRẢ VỀ JSON ARRAY (Không Markdown, Không lời dẫn):
+    [
+      {{
+        "day": "Thứ 2",
+        "breakfast": "Bánh mì ốp la (350kcal)",
+        "lunch": "Cơm sườn (600kcal)",
+        "dinner": "Cháo gà (300kcal)"
+      }},
+      ... (đủ 7 ngày)
+    ]
+    """
+    try:
+        response = chat_model.generate_content(prompt)
+        text = response.text
+        
+        # 👇 LOGIC LỌC JSON SIÊU MẠNH (Fix lỗi AI nói nhảm)
+        import json
+        
+        # Tìm vị trí bắt đầu '[' và kết thúc ']'
+        start_idx = text.find('[')
+        end_idx = text.rfind(']')
+        
+        if start_idx != -1 and end_idx != -1:
+            # Cắt đúng đoạn JSON ra
+            json_str = text[start_idx : end_idx + 1]
+            plan_data = json.loads(json_str)
+            return plan_data
+        else:
+            print("❌ AI không trả về JSON hợp lệ:", text)
+            return [{"day": "Lỗi", "breakfast": "Thử lại sau", "lunch": "...", "dinner": "..."}]
+
+    except Exception as e:
+        print(f"❌ Plan Error: {e}")
+        return [{"day": "Lỗi Server", "breakfast": "...", "lunch": "...", "dinner": "..."}]

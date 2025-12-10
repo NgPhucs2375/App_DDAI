@@ -44,9 +44,10 @@ export default function ChatbotScreen() {
     setMessages([{ id: '0', text: intro, sender: 'ai' }]);
   };
 
-  const sendMessage = async () => {
+const sendMessage = async () => {
     if (!inputText.trim()) return;
 
+    // 1. UI: Hiển thị tin nhắn người dùng ngay
     const userMsg: Message = { id: Date.now().toString(), text: inputText, sender: 'user' };
     setMessages(prev => [...prev, userMsg]);
     setInputText('');
@@ -54,25 +55,21 @@ export default function ChatbotScreen() {
     Keyboard.dismiss();
 
     try {
-      // Tạo ngữ cảnh để gửi xuống Backend
-      const context = `
-        Bạn là chuyên gia dinh dưỡng thân thiện.
-        Thông tin người dùng đang chat:
-        - Tên: ${profile.fullName}
-        - Cân nặng: ${profile.weightKg}kg, Chiều cao: ${profile.heightCm}cm
-        - Mục tiêu: ${profile.goals?.dailyCalories || 2000} kcal/ngày
-        - Dị ứng: ${profile.allergies || 'Không có'}
-        Hãy trả lời ngắn gọn, tập trung vào sức khỏe.
-      `;
+      // 2. CHUẨN BỊ DỮ LIỆU
+      // Lấy ID người dùng (để Backend biết ai đang hỏi mà tra cứu lịch sử ăn uống)
+      const userId = Number(profile.id) || 0;
 
-      // GỌI VỀ BACKEND (An toàn tuyệt đối)
-      const res = await AIService.chat(userMsg.text, context);
+      // 3. GỌI API (Đã nâng cấp)
+      // Không cần gửi context dài dòng nữa, Backend tự lo!
+      const res = await AIService.chat(userId, userMsg.text);
       
+      // 4. XỬ LÝ PHẢN HỒI TỪ AI
       const aiReply = res?.reply || "Xin lỗi, mình đang mất kết nối.";
       const aiMsg: Message = { id: (Date.now() + 1).toString(), text: aiReply, sender: 'ai' };
       setMessages(prev => [...prev, aiMsg]);
 
     } catch (error) {
+      console.error("Chat Error:", error);
       const errorMsg: Message = { id: Date.now().toString(), text: 'Lỗi kết nối Server.', sender: 'ai' };
       setMessages(prev => [...prev, errorMsg]);
     } finally {

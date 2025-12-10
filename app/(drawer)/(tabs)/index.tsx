@@ -191,6 +191,7 @@ export default function HomeScreen() {
             <QuickAction icon="stats-chart" color="#FD79A8" title="Báo cáo" onPress={() => handlePress('/reports')} />
             <QuickAction icon="chatbubbles" color="#FDCB6E" title="Trợ lý" onPress={() => handlePress('/chatbot')} />
             <QuickAction icon="barcode-outline" color="#2D3436" title="Quét Mã" onPress={() => router.push('/barcode-scan')} />
+            <QuickAction icon="calendar" color="#E84393" title="Lên lịch" onPress={() => router.push('/planner')} />
         </View>
 
         {/* WATER & CHART (Giữ nguyên) */}
