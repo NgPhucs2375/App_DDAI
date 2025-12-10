@@ -10,6 +10,8 @@ import {
   Alert,
   Animated,
   FlatList,
+  Image // Đã import Image
+  ,
   Modal,
   RefreshControl,
   StyleSheet,
@@ -45,10 +47,10 @@ const SkeletonItem = () => {
 
 export default function MealHistoryTab() {
   const userId = useUserStore(s => s.profile.id);
-  const [data, setData] = useState<any[]>([]); // Dữ liệu bữa ăn
+  const [data, setData] = useState<any[]>([]); 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<any>(null); // Item đang xem chi tiết
+  const [selectedItem, setSelectedItem] = useState<any>(null); 
 
   const loadData = useCallback(async () => {
     if (!refreshing) setLoading(true); 
@@ -78,7 +80,6 @@ export default function MealHistoryTab() {
     loadData();
   };
 
-  // Hàm xóa bữa ăn
   const handleDelete = (id: number, name: string) => {
     Alert.alert(
         "Xác nhận xóa", 
@@ -87,11 +88,10 @@ export default function MealHistoryTab() {
             { text: "Hủy", style: "cancel" },
             { 
                 text: "Xóa", 
-                style: "destructive", // Màu đỏ trên iOS
+                style: "destructive", 
                 onPress: async () => {
                     const success = await MealService.delete(id);
                     if (success) {
-                        // Cập nhật lại list ngay lập tức (Xóa khỏi state 'data')
                         const newMeals = data.filter(m => m.id !== id);
                         setData(newMeals);
                         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -121,16 +121,31 @@ export default function MealHistoryTab() {
             setSelectedItem(item);
         }}
       >
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>
-            {item.mealType === 'breakfast' ? 'Sáng' : item.mealType === 'lunch' ? 'Trưa' : item.mealType === 'dinner' ? 'Tối' : 'Ăn vặt'}
-          </Text>
-          <Text style={styles.time}>{new Date(item.createdAt).toLocaleDateString('vi-VN')}</Text>
+        {/* HEADER CỦA CARD (ĐÃ SỬA ĐỂ HIỆN ẢNH) */}
+        <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8}}>
+            <View style={{flex: 1}}>
+                <Text style={styles.cardTitle}>
+                    {item.mealType === 'breakfast' ? '🍳 Sáng' : item.mealType === 'lunch' ? '🍱 Trưa' : item.mealType === 'dinner' ? '🍲 Tối' : '🍿 Ăn vặt'}
+                </Text>
+                <Text style={styles.time}>{new Date(item.createdAt).toLocaleDateString('vi-VN')} • {new Date(item.createdAt).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}</Text>
+            </View>
+
+            {/* 👇 HIỂN THỊ ẢNH NẾU CÓ */}
+            {item.image_url ? (
+                <Image 
+                    source={{ uri: item.image_url }} 
+                    style={styles.foodImage} 
+                    resizeMode="cover"
+                />
+            ) : null}
         </View>
-        <Text style={styles.cardText} numberOfLines={1}>{item.items}</Text>
+
+        <Text style={styles.cardText} numberOfLines={2}>{item.items}</Text>
+        
         <View style={styles.footerRow}>
            <Text style={styles.badge}>{item.calories} kcal</Text>
            {item.protein > 0 && <Text style={styles.subBadge}>Đạm: {item.protein}g</Text>}
+           {item.fat > 0 && <Text style={styles.subBadge}>Béo: {item.fat}g</Text>}
         </View>
       </TouchableOpacity>
     </Swipeable>
@@ -166,6 +181,15 @@ export default function MealHistoryTab() {
       <Modal visible={!!selectedItem} transparent animationType="fade">
         <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
+                {/* Ảnh to trong Modal */}
+                {selectedItem?.image_url && (
+                    <Image 
+                        source={{ uri: selectedItem.image_url }} 
+                        style={styles.modalImage} 
+                        resizeMode="cover"
+                    />
+                )}
+                
                 <Text style={styles.modalTitle}>{selectedItem?.items}</Text>
                 <View style={styles.modalDivider}/>
                 
@@ -203,32 +227,35 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F7F9FC' },
   list: { padding: 20, paddingTop: 0, gap: 15 },
   card: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 15, elevation: 2, shadowColor: '#000', shadowOpacity: 0.05 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  
+  // Style ảnh nhỏ trong Card
+  foodImage: { width: 50, height: 50, borderRadius: 10, marginLeft: 10, backgroundColor: '#eee' },
+  
   cardTitle: { fontWeight: '700', color: Colors.light.tint, textTransform: 'uppercase', fontSize: 12 },
-  time: { color: '#999', fontSize: 12 },
-  cardText: { color: '#333', fontSize: 18, fontWeight: '600', marginBottom: 10 },
-  footerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  time: { color: '#999', fontSize: 11, marginTop: 2 },
+  cardText: { color: '#333', fontSize: 16, fontWeight: '600', marginBottom: 10, marginTop: 5 },
+  footerRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   badge: { backgroundColor: '#F0F0F0', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, color: '#555', fontWeight: '700', fontSize: 13, overflow: 'hidden' },
   subBadge: { fontSize: 12, color: '#888' },
   
-  // Style cho nút xóa khi vuốt
   deleteAction: { 
     backgroundColor: '#FF5252', 
     justifyContent: 'center', 
     alignItems: 'center', 
     width: 80, 
-    height: '100%', // Full chiều cao
+    height: '100%', 
     borderRadius: 16, 
     marginLeft: 10,
-    marginBottom: 15 // Căn cho khớp với card margin
+    marginBottom: 15 
   },
   
   emptyBox: { alignItems: 'center', marginTop: 50 },
   
-  // Modal Styles
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 30 },
   modalContent: { backgroundColor: '#fff', borderRadius: 20, padding: 25, elevation: 5 },
-  modalTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 10, textAlign: 'center', color: '#333' },
+  // Style ảnh to trong Modal
+  modalImage: { width: '100%', height: 200, borderRadius: 15, marginBottom: 15, backgroundColor: '#f0f0f0' },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 10, textAlign: 'center', color: '#333' },
   modalDivider: { height: 1, backgroundColor: '#eee', marginBottom: 15 },
   modalRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#f9f9f9', paddingBottom: 8 },
   closeBtn: { backgroundColor: Colors.light.tint, padding: 12, borderRadius: 12, alignItems: 'center', marginTop: 15 }

@@ -12,6 +12,8 @@ from typing import Optional, List, Dict
 import os
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field, validator
+import cloudinary
+import cloudinary.uploader
 
 # ==========================================
 # 1. CẤU HÌNH AI & DATABASE
@@ -29,6 +31,20 @@ generation_config = {
     "response_mime_type": "application/json",
 }
 
+CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME")
+CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY")
+CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET")
+
+if CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET:
+    cloudinary.config( 
+      cloud_name = CLOUDINARY_CLOUD_NAME, 
+      api_key = CLOUDINARY_API_KEY, 
+      api_secret = CLOUDINARY_API_SECRET,
+      secure = True
+    )
+    print("✅ Đã kết nối Cloudinary.")
+else:
+    print("⚠️ Chưa cấu hình Cloudinary (Tính năng upload ảnh sẽ lỗi).")
 # Dùng model Flash cho nhanh
 model = genai.GenerativeModel(
     model_name="gemini-2.5-flash", # Hoặc gemini-1.5-flash tùy key của bạn
@@ -99,6 +115,7 @@ class Meal(Base):
     protein = Column(Float, default=0)
     carbs = Column(Float, default=0)
     fat = Column(Float, default=0)
+    image_url = Column(String, nullable=True)
     date = Column(Date, default=datetime.date.today)
     createdAt = Column(String, default=str(datetime.datetime.now()))
 
@@ -151,6 +168,7 @@ class MealCreate(BaseModel):
     protein: float = Field(0, ge=0)
     carbs: float = Field(0, ge=0)
     fat: float = Field(0, ge=0)
+    image_base64: Optional[str] = None
     
     @validator('items')
     def name_must_be_valid(cls, v):
@@ -351,9 +369,39 @@ def analyze_image(payload: ImagePayload, db: Session = Depends(get_db)):
 # --- MEALS & REPORT ---
 @app.post("/meals/")
 def add_meal(m: MealCreate, db: Session = Depends(get_db)):
-    # Lưu bữa ăn vào lịch sử
-    db.add(Meal(**m.dict(), date=datetime.date.today())); db.commit()
-    return {"message": "Saved"}
+    final_image_url = None
+    
+    # Nếu có ảnh gửi lên -> Upload lên Cloudinary
+    if m.image_base64:
+        try:
+            # Xử lý chuỗi base64 nếu cần
+            base64_str = m.image_base64
+            if not base64_str.startswith("data:image"):
+                base64_str = "data:image/jpeg;base64," + base64_str
+            
+            # Upload
+            upload_result = cloudinary.uploader.upload(base64_str, folder="fitlife_meals")
+            final_image_url = upload_result.get("url")
+            print(f"☁️ Upload ảnh thành công: {final_image_url}")
+        except Exception as e:
+            print(f"❌ Lỗi Upload ảnh: {e}")
+
+    # Lưu vào Database
+    new_meal = Meal(
+        user_id=m.user_id,
+        mealType=m.mealType,
+        items=m.items,
+        calories=m.calories,
+        protein=m.protein,
+        carbs=m.carbs,
+        fat=m.fat,
+        image_url=final_image_url, # Lưu link ảnh
+        date=datetime.date.today()
+    )
+    
+    db.add(new_meal)
+    db.commit()
+    return {"message": "Saved", "image": final_image_url}
 
 @app.get("/meals/history/{user_id}")
 def get_history(user_id: int, date: str = None, db: Session = Depends(get_db)):
@@ -747,3 +795,16 @@ def generate_weekly_plan(user_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         print(f"❌ Plan Error: {e}")
         return [{"day": "Lỗi Server", "breakfast": "...", "lunch": "...", "dinner": "..."}]
+    
+# --- API NÂNG CẤP DB (CHẠY 1 LẦN) ---
+from sqlalchemy import text
+
+@app.get("/debug/upgrade-db")
+def upgrade_database_schema(db: Session = Depends(get_db)):
+    try:
+        # Lệnh SQL để thêm cột image_url vào bảng meals
+        db.execute(text("ALTER TABLE meals ADD COLUMN image_url VARCHAR;"))
+        db.commit()
+        return {"message": "✅ Đã thêm cột image_url thành công!"}
+    except Exception as e:
+        return {"message": f"⚠️ Có thể cột đã tồn tại hoặc lỗi: {e}"}

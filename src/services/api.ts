@@ -36,7 +36,7 @@ export const AuthService = {
 
 export const MealService = {
    // Thêm món ăn
-   add: (data: { user_id: number; mealType: string; items: string; calories: number; protein?: number; carbs?: number; fat?: number }) => 
+   add: (data: { user_id: number; mealType: string; items: string; calories: number; protein?: number; carbs?: number; fat?: number;image_base64?: string; }) => 
     post('/meals/', data),
 
    // Báo cáo ngày
