@@ -21,7 +21,7 @@ import cloudinary.uploader
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 genai.configure(api_key=GEMINI_API_KEY)
-
+app = FastAPI()
 # Cấu hình trả về JSON
 generation_config = {
     "temperature": 0.7, # Tăng sáng tạo lên một chút để AI chém gió hay hơn
@@ -194,6 +194,14 @@ def get_db():
     finally: db.close()
 
 # --- AUTH ---
+@app.get("/")
+def read_root():
+    return {
+        "message": "Welcome to NutriScan AI API 🚀",
+        "status": "Live",
+        "docs": "/docs" # Gợi ý đường dẫn tài liệu
+    }
+
 @app.post("/auth/register")
 def register(user: UserRegister, db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == user.email).first(): raise HTTPException(400, "Email tồn tại")
